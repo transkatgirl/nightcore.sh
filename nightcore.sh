@@ -21,6 +21,9 @@ export visualizer_total_bars=160
 # Change the number of loudness values that are cropped out of the visualizer (540 total). 200 is a decent default, but it may need to be decreased for some videos,
 export visualizer_crop_amount=200
 
+# Change the opacity of the visualizer (from 0 to 1). 
+export visualizer_opacity=0.6
+
 # Change the framerate of the video. Higher framerates can result in smoother playback on high-end systems. If you intend to share the video or upload it to streaming sites, setting this higher than 60 is pointless.
 export maximum_video_framerate=60
 
@@ -78,16 +81,25 @@ combine_background_segments() {
 
 # Add an audio visualizer (using /tmp/audio.flac) to the background video (/tmp/background.mp4). Output file will be named /tmp/combined.mkv
 add_video_effects() {
-	ffmpeg -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=16384:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=0.5[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset fast /tmp/combined.mkv
+	ffmpeg -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=16384:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset fast /tmp/combined.mkv
 	rm /tmp/audio.flac
 	rm /tmp/background.mp4
 }
 
+if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg`) ]]; then
+	echo "Please install the required dependencies before attempting to run the script."
+	exit
+fi
 if [ -z $1 ]; then
 	echo "Please pass a speed multiplier to the script (eg. sh nightcore.sh 1.2)."
 	echo "Note that the input files need to be named input.flac and input.png for the script to detect them."
 	exit
 fi
+if [[ ! ( -f "input.flac" && -f "input.png") ]]; then
+	echo "A necessary input file is missing."
+	exit
+fi
+
 export speed=$1
 set -euo pipefail
 
@@ -107,7 +119,7 @@ add_video_effects
 cp /tmp/combined.mkv output.lossless.mkv
 
 # Uncomment this line for perceptibly lossless video+audio output. Recommended for uploading to streaming sites (like YouTube), should be avoided for quick sharing (like on online chats or social media).
-#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset slow -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a aac -b:a 320k output.lossyhq.mp4
+ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset slow -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a aac -b:a 320k output.lossyhq.mp4
 
 # Uncomment this line for medium quality video+audio output. Recommended for quick sharing (like for online chats or social media), should be avoided for uploads to streaming sites (like YouTube).
 #ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 26 -s 1280x720 -sws_flags lanczos -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a libmp3lame -q:a 0 output.lossymq.mp4
