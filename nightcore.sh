@@ -119,7 +119,7 @@ add_video_effects
 cp /tmp/combined.mkv output.lossless.mkv
 
 # Uncomment this line for perceptibly lossless video+audio output. Recommended for uploading to streaming sites (like YouTube), should be avoided for quick sharing (like on online chats or social media).
-ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset slow -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a aac -b:a 320k output.lossyhq.mp4
+#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset slow -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a aac -b:a 320k output.lossyhq.mp4
 
 # Uncomment this line for medium quality video+audio output. Recommended for quick sharing (like for online chats or social media), should be avoided for uploads to streaming sites (like YouTube).
 #ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 26 -s 1280x720 -sws_flags lanczos -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a libmp3lame -q:a 0 output.lossymq.mp4
