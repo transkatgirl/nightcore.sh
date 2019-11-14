@@ -16,3 +16,9 @@ Once the script is configured, name your input files `input.flac` and `input.png
 Useful speed multipliers range from 1.1 to 1.3, different songs will likely need to be set to different speeds.
 
 When running the script, please make sure you have at least 1GB of space available in your /tmp directory, and 1.5GB of available system RAM.
+
+## Demos
+Want to see what this script is capable of? Some demo videos are posted below.
+Zedd - I want you to know (1.2x speed): https://streamable.com/dr30j
+OneRepublic - Counting Stars (1.2x speed): https://streamable.com/w39xa
+TheFatRat - The Calling (1.2x speed): https://streamable.com/a3dnj
