@@ -33,23 +33,26 @@ export maximum_video_framerate=60
 
 # Resize input image (input.png), and place processed image at /tmp/resized.png.
 process_image() {
+	echo "Processing image..."
 	if [[ `command -v waifu2x-converter-cpp` ]]; then
-		waifu2x-converter-cpp -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
+		waifu2x-converter-cpp -v 0 -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
 	else
 		cp input.png /tmp/input.png
 	fi
-	ffmpeg -i /tmp/input.png -vf scale=2000x1160:force_original_aspect_ratio=increase -sws_flags lanczos+accurate_rnd+full_chroma_int+full_chroma_inp /tmp/resized.png
+	ffmpeg -y -v error -i /tmp/input.png -vf scale=2000x1160:force_original_aspect_ratio=increase -sws_flags lanczos+accurate_rnd+full_chroma_int+full_chroma_inp /tmp/resized.png
 	rm /tmp/input.png
 }
 
 # Speed up input audio (input.flac) by $speed times, and placed processed audio at /tmp/audio.flac.
 process_audio() {
-	sox input.flac -V -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 16384 --show-progress speed $speed rate -v -I -s 96k gain -n
+	echo "Processing audio..."
+	sox input.flac -V1 -q -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 16384 speed $speed rate -v -I -s 96k gain -n
 }
 
 # Create segments of gliding background video, using /tmp/audio.flac and /tmp/resized.png.
 # The list of segments will be named /tmp/combine.txt
 create_background_segments() {
+	echo "Creating background segments..."
 	export x=0
 	export y=0
 	export maxr=40
@@ -64,7 +67,7 @@ create_background_segments() {
 		else
 			export changy=$((($RANDOM % (($maxr*2)+$y))-($maxr+$y)))
 		fi
-		ffmpeg -r $maximum_video_framerate -filter_complex "color=black:s=1920x1080[background];movie=/tmp/resized.png[overlay];[background][overlay]overlay=$(($x-$maxr))+($changx*t):$(($y-$maxr))+($changy*t)" -t 1 -crf 0 -preset ultrafast /tmp/glide-tmp$i.mp4
+		ffmpeg -y -v error -r $maximum_video_framerate -filter_complex "color=black:s=1920x1080[background];movie=/tmp/resized.png[overlay];[background][overlay]overlay=$(($x-$maxr))+($changx*t):$(($y-$maxr))+($changy*t)" -t 1 -crf 0 -preset ultrafast /tmp/glide-tmp$i.mp4
 		export x=$(($x+$changx))
 		export y=$(($y+$changy))
 		printf "file /tmp/glide-tmp$i.mp4\n" >> /tmp/combine.txt
@@ -74,14 +77,16 @@ create_background_segments() {
 
 # Combine segments of gliding background video using /tmp/combine.txt. The output file will be named /tmp/background.mp4.
 combine_background_segments() {
-	ffmpeg -f concat -safe 0 -i /tmp/combine.txt -c copy /tmp/background.mp4
+	echo "Combining background segments..."
+	ffmpeg -y -v error -f concat -safe 0 -i /tmp/combine.txt -c copy /tmp/background.mp4
 	rm /tmp/glide-tmp*.mp4
 	rm /tmp/combine.txt
 }
 
 # Add an audio visualizer (using /tmp/audio.flac) to the background video (/tmp/background.mp4). Output file will be named /tmp/combined.mkv
 add_video_effects() {
-	ffmpeg -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=16384:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset fast /tmp/combined.mkv
+	echo "Creating final video..."
+	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=16384:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset fast /tmp/combined.mkv
 	rm /tmp/audio.flac
 	rm /tmp/background.mp4
 }
@@ -95,13 +100,21 @@ if [ -z $1 ]; then
 	echo "Note that the input files need to be named input.flac and input.png for the script to detect them."
 	exit
 fi
-if [[ ! ( -f "input.flac" && -f "input.png") ]]; then
+
+if [[ ! -f "input.flac" ]]; then
 	echo "A necessary input file is missing."
 	exit
 fi
 
 export speed=$1
 set -euo pipefail
+
+if [[ ! -f "input.png" ]]; then
+	echo "Warn: Unable to find image, creating audio-only output."
+	process_audio
+	cp /tmp/audio.flac "output.lossless.flac"
+	exit
+fi
 
 process_audio
 if [ -f "background.mp4" ]; then
@@ -126,6 +139,15 @@ cp /tmp/combined.mkv output.lossless.mkv
 
 # Uncomment this line for low quality video+audio output. Can be useful for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like YouTube).
 #ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 33 -s 640x360 -r 30 -sws_flags lanczos -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a libmp3lame -q:a 6 output.lossylq.mp4
+
+# Uncomment this line for lossless audio-only output. Recommended for quick local playback or uploads to streaming sites, should be avoided for quick sharing (like on online chats or social media).
+#ffmpeg -i /tmp/combined.mkv -vn -acodec copy output.lossless.flac
+
+# Uncomment this line for perceptibly lossless audio-only output. Recommended for quick sharing (like for online chats or social media) or uploads to streaming sites, should be avoided for uploads to streaming sites (like Soundcloud).
+#ffmpeg -i /tmp/combined.mkv -vn -acodec libopus -b:a 320k -vbr on -compression_level 10 output.lossyhq.ogg
+
+# Uncomment this line for medium quality audio-only output. Recommended for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like Soundcloud).
+#ffmpeg -i /tmp/combined.mkv -vn -acodec libopus -b:a 120k -vbr on -compression_level 10 output.lossymq.ogg
 
 rm /tmp/combined.mkv
 
