@@ -19,6 +19,9 @@ When running the script, please make sure you have at least 1GB of space availab
 
 ## Demos
 Want to see what this script is capable of? Some demo videos are posted below.
+
 Zedd - I want you to know (1.2x speed): https://streamable.com/dr30j
+
 OneRepublic - Counting Stars (1.2x speed): https://streamable.com/w39xa
+
 TheFatRat - The Calling (1.2x speed): https://streamable.com/a3dnj
