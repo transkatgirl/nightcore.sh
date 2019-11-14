@@ -13,7 +13,7 @@ export waifu2x_scale_ratio=4
 export waif2x_denoise_amount=3
 
 # Change the colors used in the visualizer.
-export visualizer_colors="0x000000|0x232323"
+export visualizer_colors="0x111111|0x333333"
 
 # Change the number of total bars on the visualizer (note that some of these are cropped out). 160 is a decent default.
 export visualizer_total_bars=160
