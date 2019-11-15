@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Made by katattakd. Dependencies: FFMPEG, SoX, GNU Coreutils, waifu2xcpp (optional)
 # Note: Make sure your /tmp folder has at least 800MB of free space before running this script. All processing until the final encode is done with lossless H.264 and FLAC, which can result in temporary files using a LOT of space. Temporary files are deleted as soon as they are no longer needed, in order to reduce /tmp usage.
 
@@ -96,7 +96,7 @@ if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg`) ]]; then
 	exit
 fi
 if [ -z $1 ]; then
-	echo "Please pass a speed multiplier to the script (eg. sh nightcore.sh 1.2)."
+	echo "Please pass a speed multiplier to the script (eg. bash nightcore.sh 1.2)."
 	echo "Note that the input files need to be named input.flac and input.png for the script to detect them."
 	exit
 fi
