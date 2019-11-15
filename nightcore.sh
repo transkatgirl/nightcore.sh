@@ -46,7 +46,7 @@ process_image() {
 # Speed up input audio (input.flac) by $speed times, and placed processed audio at /tmp/audio.flac.
 process_audio() {
 	echo "Processing audio..."
-	sox input.flac -V1 -q -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 16384 speed $speed rate -v -I -s 96k gain -n
+	sox input.flac -V1 -q -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 16384 speed $speed rate -v -I -s 48k gain -n
 }
 
 # Create segments of gliding background video, using /tmp/audio.flac and /tmp/resized.png.
@@ -86,7 +86,7 @@ combine_background_segments() {
 # Add an audio visualizer (using /tmp/audio.flac) to the background video (/tmp/background.mp4). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=16384:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset fast /tmp/combined.mkv
+	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset fast /tmp/combined.mkv
 	rm /tmp/audio.flac
 	rm /tmp/background.mp4
 }
@@ -132,13 +132,13 @@ add_video_effects
 cp /tmp/combined.mkv output.lossless.mkv
 
 # Uncomment this line for perceptibly lossless video+audio output. Recommended for uploading to streaming sites (like YouTube), should be avoided for quick sharing (like on online chats or social media).
-#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset slow -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a aac -b:a 320k output.lossyhq.mp4
+#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset slow -profile:v high -level 4.1 -preset slow -movflags +faststart -c:a aac -b:a 320k output.lossyhq.mp4
 
 # Uncomment this line for medium quality video+audio output. Recommended for quick sharing (like for online chats or social media), should be avoided for uploads to streaming sites (like YouTube).
-#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 26 -s 1280x720 -sws_flags lanczos -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a libmp3lame -q:a 0 output.lossymq.mp4
+#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 26 -s 1280x720 -sws_flags lanczos -preset slow -movflags +faststart -c:a aac -b:a 320k output.lossymq.mp4
 
 # Uncomment this line for low quality video+audio output. Can be useful for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like YouTube).
-#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 33 -s 640x360 -r 30 -sws_flags lanczos -profile:v high -level 4.1 -preset slow -movflags +faststart -af "aresample=resampler=soxr:precision=28" -c:a libmp3lame -q:a 6 output.lossylq.mp4
+#ffmpeg -i /tmp/combined.mkv -c:v libx264 -crf:v 33 -s 640x360 -r 30 -sws_flags lanczos -preset slow -movflags +faststart -c:a aac -b:a 128k output.lossylq.mp4
 
 # Uncomment this line for lossless audio-only output. Recommended for quick local playback or uploads to streaming sites, should be avoided for quick sharing (like on online chats or social media).
 #ffmpeg -i /tmp/combined.mkv -vn -acodec copy output.lossless.flac
