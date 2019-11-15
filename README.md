@@ -3,6 +3,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 
 ## Dependencies
 - GNU Coreutils or [untested] Busybox (for running the script)
+- Bash (for running the script)
 - FFMPEG (for encoding the video)
 - SoX (for encoding the audio)
 - [optional] Waifu2xcpp (for better image upscaling)
