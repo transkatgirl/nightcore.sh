@@ -46,7 +46,7 @@ process_image() {
 # Speed up input audio (input.flac) by $speed times, and placed processed audio at /tmp/audio.flac.
 process_audio() {
 	echo "Processing audio..."
-	sox input.flac -V1 -q -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 16384 speed $speed rate -v -I -s 48k gain -n
+	sox input.flac -V1 -q -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 128000 speed $speed rate -v -I -s 48k gain -n
 }
 
 # Create segments of gliding background video, using /tmp/audio.flac and /tmp/resized.png.
