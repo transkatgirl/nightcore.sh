@@ -1,5 +1,5 @@
 # Nightcore.sh
-A bash script that allows you to easily create "Nightcore" versions of songs.
+A shell script that allows you to easily create "Nightcore" versions of songs.
 
 ## Dependencies
 - GNU Coreutils or [untested] Busybox (for running the script)
