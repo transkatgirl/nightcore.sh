@@ -13,7 +13,7 @@ export waifu2x_scale_ratio=4
 export waif2x_denoise_amount=3
 
 # Change the colors used in the visualizer.
-export visualizer_colors="0x111111|0x333333"
+export visualizer_colors="0x000000|0x000000"
 
 # Change the number of total bars on the visualizer (note that some of these are cropped out). 160 is a decent default.
 export visualizer_total_bars=160
@@ -56,21 +56,30 @@ create_background_segments() {
 	export x=0
 	export y=0
 	export maxr=40
-	for i in $(seq 0 $(soxi -D /tmp/audio.flac | awk '{ print int($1 + .50) }')); do
-		if [ $x -gt 0 ]; then
-			export changx=$((($RANDOM % (($maxr*2)-$x))-$maxr))
-		else
-			export changx=$((($RANDOM % (($maxr*2)+$x))-($maxr+$x)))
-		fi
-		if [ $y -gt 0 ]; then
-			export changy=$((($RANDOM % (($maxr*2)-$y))-$maxr))
-		else
-			export changy=$((($RANDOM % (($maxr*2)+$y))-($maxr+$y)))
-		fi
-		ffmpeg -y -v error -r $maximum_video_framerate -filter_complex "color=black:s=1920x1080[background];movie=/tmp/resized.png[overlay];[background][overlay]overlay=$(($x-$maxr))+($changx*t):$(($y-$maxr))+($changy*t)" -t 1 -crf 0 -preset ultrafast /tmp/glide-tmp$i.mp4
-		export x=$(($x+$changx))
-		export y=$(($y+$changy))
-		printf "file /tmp/glide-tmp$i.mp4\n" >> /tmp/combine.txt
+	export filterx="0"
+	export filtery="0"
+	for mi in $(seq 0 $(soxi -D /tmp/audio.flac | awk '{ print int(($1/60) + 1) }')); do
+		for i in $(seq 0 60); do
+			if [ $x -gt 0 ]; then
+				export changx=$((($RANDOM % (($maxr*2)-$x))-$maxr))
+			else
+				export changx=$((($RANDOM % (($maxr*2)+$x))-($maxr+$x)))
+			fi
+			if [ $y -gt 0 ]; then
+				export changy=$((($RANDOM % (($maxr*2)-$y))-$maxr))
+			else
+				export changy=$((($RANDOM % (($maxr*2)+$y))-($maxr+$y)))
+			fi
+			filterx="if(gt(t\,$i)\,$(($x-$maxr))+($changx*(t-$i))\,$filterx)"
+			filtery="if(gt(t\,$i)\,$(($y-$maxr))+($changy*(t-$i))\,$filtery)"
+			export x=$(($x+$changx))
+			export y=$(($y+$changy))
+
+		done
+		ffmpeg -y -v error -r $maximum_video_framerate -filter_complex "color=black:s=1920x1080[background];movie=/tmp/resized.png[overlay];[background][overlay]overlay=$filterx:$filtery" -t $(($i+1)) -crf 0 -preset ultrafast /tmp/glide-tmp$mi.mp4
+		printf "file /tmp/glide-tmp$mi.mp4\n" >> /tmp/combine.txt
+		export filterx="$(($x-$maxr))"
+		export filtery="$(($y-$maxr))"
 	done
 	rm /tmp/resized.png
 }
