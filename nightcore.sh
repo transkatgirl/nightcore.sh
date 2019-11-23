@@ -13,13 +13,10 @@ export waifu2x_scale_ratio=4
 export waif2x_denoise_amount=3
 
 # Change the colors used in the visualizer.
-export visualizer_colors="0x000000|0x000000"
+export visualizer_colors="0x111111|0x111111"
 
 # Change the number of total bars on the visualizer (note that some of these are cropped out). 160 is a decent default.
 export visualizer_total_bars=160
-
-# Change the number of loudness values that are cropped out of the visualizer (540 total). 200 is a decent default, but it may need to be decreased for some videos,
-export visualizer_crop_amount=200
 
 # Change the opacity of the visualizer (from 0 to 1). 
 export visualizer_opacity=0.6
@@ -34,11 +31,11 @@ export maximum_video_framerate=60
 # Resize input image (input.png), and place processed image at /tmp/resized.png.
 process_image() {
 	echo "Processing image..."
-	if [[ `command -v waifu2x-converter-cpp` ]]; then
-		waifu2x-converter-cpp -v 0 -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
-	else
+	#if [[ `command -v waifu2x-converter-cpp` ]]; then
+	#	waifu2x-converter-cpp -v 0 -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
+	#else
 		cp input.png /tmp/input.png
-	fi
+	#fi
 	ffmpeg -y -v error -i /tmp/input.png -vf scale=2000x1160:force_original_aspect_ratio=increase -sws_flags lanczos+accurate_rnd+full_chroma_int+full_chroma_inp /tmp/resized.png
 	rm /tmp/input.png
 }
@@ -95,7 +92,7 @@ combine_background_segments() {
 # Add an audio visualizer (using /tmp/audio.flac) to the background video (/tmp/background.mp4). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=540" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
 	rm /tmp/audio.flac
 }
 
