@@ -95,9 +95,8 @@ combine_background_segments() {
 # Add an audio visualizer (using /tmp/audio.flac) to the background video (/tmp/background.mp4). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset fast /tmp/combined.mkv
+	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=log:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((540+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
 	rm /tmp/audio.flac
-	rm /tmp/background.mp4
 }
 
 if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg`) ]]; then
@@ -137,6 +136,9 @@ add_video_effects
 
 ##### End of processing code
 
+# Uncomment this lines to output processed background visuals, seperate from the actual video. This may be useful if you want to experiment with different speed or visualizer settings, as it will speed up future runs signficantly. However, the background.mp4 file needs to be removed if you change the image being used, or if you change the waifu2x settings used.
+#cp -n /tmp/background.mp4 background.mp4
+
 # Uncomment this line for lossless video+audio output. Extremely large filesize, should only be used for quick local playback or as input for further encoding steps.
 cp /tmp/combined.mkv output.lossless.mkv
 
@@ -158,5 +160,5 @@ cp /tmp/combined.mkv output.lossless.mkv
 # Uncomment this line for medium quality audio-only output. Recommended for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like Soundcloud).
 #ffmpeg -i /tmp/combined.mkv -vn -acodec libopus -b:a 120k -vbr on -compression_level 10 output.lossymq.ogg
 
+rm /tmp/background.mp4
 rm /tmp/combined.mkv
-
