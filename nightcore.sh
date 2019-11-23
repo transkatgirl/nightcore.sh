@@ -13,7 +13,7 @@ export waifu2x_scale_ratio=4
 export waif2x_denoise_amount=3
 
 # Change the colors used in the visualizer.
-export visualizer_colors="0x111111|0x111111"
+export visualizer_colors="0x111111|0x222222"
 
 # Change the number of total bars on the visualizer (note that some of these are cropped out). 160 is a decent default.
 export visualizer_total_bars=160
@@ -67,8 +67,8 @@ create_background_segments() {
 			else
 				export changy=$((($RANDOM % (($maxr*2)+$y))-($maxr+$y)))
 			fi
-			filterx="if(gt(t\,$i)\,$(($x-$maxr))+($changx*(t-$i))\,$filterx)"
-			filtery="if(gt(t\,$i)\,$(($y-$maxr))+($changy*(t-$i))\,$filtery)"
+			filterx="if(gt(t\,$i)\,$(($x-$maxr))+($changx*(sqrt(t-$i)*(sin((t-$i)*PI/2))))\,$filterx)"
+			filtery="if(gt(t\,$i)\,$(($y-$maxr))+($changy*(sqrt(t-$i)*(sin((t-$i)*PI/2))))\,$filtery)"
 			export x=$(($x+$changx))
 			export y=$(($y+$changy))
 
@@ -92,7 +92,7 @@ combine_background_segments() {
 # Add an audio visualizer (using /tmp/audio.flac) to the background video (/tmp/background.mp4). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=540" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=580" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
 	rm /tmp/audio.flac
 }
 
