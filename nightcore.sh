@@ -31,11 +31,11 @@ export maximum_video_framerate=60
 # Resize input image (input.png), and place processed image at /tmp/resized.png.
 process_image() {
 	echo "Processing image..."
-	#if [[ `command -v waifu2x-converter-cpp` ]]; then
-	#	waifu2x-converter-cpp -v 0 -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
-	#else
+	if [[ `command -v waifu2x-converter-cpp` ]]; then
+		waifu2x-converter-cpp -v 0 -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
+	else
 		cp input.png /tmp/input.png
-	#fi
+	fi
 	ffmpeg -y -v error -i /tmp/input.png -vf scale=2000x1160:force_original_aspect_ratio=increase -sws_flags lanczos+accurate_rnd+full_chroma_int+full_chroma_inp /tmp/resized.png
 	rm /tmp/input.png
 }
