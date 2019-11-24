@@ -4,6 +4,10 @@
 
 ##### Tunables:
 
+# Waifu2x is a program which uses machine learning to upscale images and improve visual quality. If this setting is enabled, it is used to upscale and smooth the background image. Please note that enabling this can considerably increase processing time. 
+# Note: If waifu2x is not installed, this setting is ignored.
+export waifu2x_enabled=true
+
 # Change the amount that waifu2x upscales the image. Note that setting this too high won't cause issues (as the image is downscaled right after), but will increase processing time.
 # Setting this too low can reduce visual quality if the input image is small.
 export waifu2x_scale_ratio=4
@@ -11,6 +15,9 @@ export waifu2x_scale_ratio=4
 # Change the amount that waifu2x denoises the image (0-3). Setting this too low can result in reduced visual quality, while setting it too high can result in added visual artifacts (especially in non-anime images).
 # This is set to the highest by default, as it's assumed that the user is using low-resoultion anime-style images. If you are providing high-quality or non-anime images, you may want to reduce this value. 
 export waif2x_denoise_amount=3
+
+# To make the video more fun to watch, a basic wiggle effect is applied to the background image. This setting allows you to enable or disable the wiggle effect. Please note that enabling this effect can considerably increase processing time.
+export better_background_visuals=true
 
 # Change the colors used in the visualizer.
 export visualizer_colors="0x111111|0x222222"
@@ -31,7 +38,7 @@ export maximum_video_framerate=60
 # Resize input image (input.png), and place processed image at /tmp/resized.png.
 process_image() {
 	echo "Processing image..."
-	if [[ `command -v waifu2x-converter-cpp` ]]; then
+	if [[ `command -v waifu2x-converter-cpp` && $waifu2x_enabled = true ]]; then
 		waifu2x-converter-cpp -v 0 -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
 	else
 		cp input.png /tmp/input.png
@@ -52,7 +59,7 @@ create_background_segments() {
 	echo "Creating background segments..."
 	export x=0
 	export y=0
-	export maxr=40
+	export maxr=30
 	export filterx="0"
 	export filtery="0"
 	for mi in $(seq 0 $(soxi -D /tmp/audio.flac | awk '{ print int(($1/60) + 1) }')); do
@@ -89,10 +96,16 @@ combine_background_segments() {
 	rm /tmp/combine.txt
 }
 
-# Add an audio visualizer (using /tmp/audio.flac) to the background video (/tmp/background.mp4). Output file will be named /tmp/combined.mkv
+# Add an audio visualizer (using /tmp/audio.flac) to the background (/tmp/background.mp4 or /tmp/resized.png). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=580" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+	if [ $better_background_visuals = true ]; then
+		ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=580" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+		rm /tmp/background.mp4
+	else
+		ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/audio.flac -filter_complex "[0:a]showfreqs=s=$(($visualizer_total_bars))x540:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=2275x540:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=1920:1080:40:40[background];[background][visualizer]overlay=0:580" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+		rm /tmp/resized.png
+	fi
 	rm /tmp/audio.flac
 }
 
@@ -122,19 +135,14 @@ if [[ ! -f "input.png" ]]; then
 fi
 
 process_audio
-if [ -f "background.mp4" ]; then
-	cp background.mp4 /tmp/background.mp4
-else
-	process_image
+process_image
+if [ $better_background_visuals = true ]; then
 	create_background_segments
 	combine_background_segments
 fi
 add_video_effects
 
 ##### End of processing code
-
-# Uncomment this lines to output processed background visuals, seperate from the actual video. This may be useful if you want to experiment with different speed or visualizer settings, as it will speed up future runs signficantly. However, the background.mp4 file needs to be removed if you change the image being used, or if you change the waifu2x settings used.
-#cp -n /tmp/background.mp4 background.mp4
 
 # Uncomment this line for lossless video+audio output. Extremely large filesize, should only be used for quick local playback or as input for further encoding steps.
 cp /tmp/combined.mkv output.lossless.mkv
@@ -157,5 +165,4 @@ cp /tmp/combined.mkv output.lossless.mkv
 # Uncomment this line for medium quality audio-only output. Recommended for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like Soundcloud).
 #ffmpeg -i /tmp/combined.mkv -vn -acodec libopus -b:a 120k -vbr on -compression_level 10 output.lossymq.ogg
 
-rm /tmp/background.mp4
 rm /tmp/combined.mkv
