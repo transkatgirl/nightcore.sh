@@ -135,8 +135,7 @@ export visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/('$visua
 
 if [ $render_preview = true ]; then
 	echo "Warn: Creating a low quality uncompressed preview video."
-	echo "Processing audio..."
-	sox input.flac -V1 -q -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 128000 speed $speed rate -m 48k gain -n
+	process_audio
 	echo "Processing image..."
 	ffmpeg -y -v error -i input.png -vf scale=266x154:force_original_aspect_ratio=increase -sws_flags lanczos /tmp/resized.png
 	echo "Creating final video..."
