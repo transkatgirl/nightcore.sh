@@ -6,7 +6,7 @@
 ##### Tunables:
 
 # It can normally take a while and a lot of resources for this script to render videos, especially on lower-end hardware. This allows you to generate a quick preview of what the video would look like, and should render fairly quickly, even on low-end hardware.
-export render_preview=true
+export render_preview=false
 
 # Change the amount that waifu2x upscales the image. Note that setting this too high won't cause issues (as the image is downscaled right after), but will increase processing time.
 # Setting this too low can reduce visual quality if the input image is small. This should be set to at least "1" if the image is 4k, "2" if the image is 1080p, "3" if the image is 720p, or "5" if the image is 480p.
@@ -19,7 +19,7 @@ export waif2x_denoise_amount=3
 # Change the colors used in the visualizer.
 export visualizer_colors="0x111111|0x232323"
 
-# Change the number of bars on the visualizer (note that some of these are cropped out). 120 is a decent default.
+# Change the number of bars shown on the visualizer. 120 is a decent default.
 export visualizer_bars=120
 
 # Change how the visualizer displays loudness. Possible options are lin, sqrt, cbrt, and log.
