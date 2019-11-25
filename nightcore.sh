@@ -6,7 +6,7 @@
 ##### Tunables:
 
 # It can normally take a while and a lot of resources for this script to render videos, especially on lower-end hardware. This allows you to generate a quick preview of what the video would look like, and should render fairly quickly, even on low-end hardware.
-export render_preview=false
+export render_preview=true
 
 # Change the amount that waifu2x upscales the image. Note that setting this too high won't cause issues (as the image is downscaled right after), but will increase processing time.
 # Setting this too low can reduce visual quality if the input image is small. This should be set to at least "1" if the image is 4k, "2" if the image is 1080p, "3" if the image is 720p, or "5" if the image is 480p.
@@ -19,8 +19,14 @@ export waif2x_denoise_amount=3
 # Change the colors used in the visualizer.
 export visualizer_colors="0x111111|0x232323"
 
-# Change the number of total bars on the visualizer (note that some of these are cropped out). 160 is a decent default.
-export visualizer_total_bars=160
+# Change the number of bars on the visualizer (note that some of these are cropped out). 120 is a decent default.
+export visualizer_bars=120
+
+# Change how the visualizer displays loudness. Possible options are lin, sqrt, cbrt, and log.
+export visualizer_loudness_curve="log"
+
+# Change the number of loudness values that are cropped out of the visualizer (1080 total). 400 is a decent default, but it may need to be changed depending on the loudness curve used.
+export visualizer_crop_amount=400
 
 # Change the opacity of the visualizer (from 0 to 1). 
 export visualizer_opacity=0.7
@@ -92,7 +98,7 @@ combine_background_segments() {
 # Add an audio visualizer (using /tmp/audio.flac) to the background (/tmp/background.mp4 or /tmp/resized.png). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=4096:win_func=blackman,scale=4552x1080:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=1160" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
 	rm /tmp/background.mp4
 	rm /tmp/audio.flac
 }
@@ -122,6 +128,8 @@ if [[ ! -f "input.png" ]]; then
 	exit
 fi
 
+export visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/(18000/24000)) }')
+
 if [ $render_preview = true ]; then
 	echo "Warn: Creating a low quality uncompressed preview video."
 	echo "Processing audio..."
@@ -129,7 +137,7 @@ if [ $render_preview = true ]; then
 	echo "Processing image..."
 	ffmpeg -y -v error -i input.png -vf scale=266x154:force_original_aspect_ratio=increase -sws_flags lanczos /tmp/resized.png
 	echo "Creating final video..."
-	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=cbrt:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,scale=303x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:77" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.mkv
+	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:72:0:0,scale=256x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:$((72+($visualizer_crop_amount/15)))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.mkv
 	rm /tmp/resized.png
 	rm /tmp/audio.flac
 	exit
