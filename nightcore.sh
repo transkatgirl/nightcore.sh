@@ -22,6 +22,9 @@ export visualizer_colors="0x111111|0x232323"
 # Change the number of bars shown on the visualizer. 120 is a decent default.
 export visualizer_bars=120
 
+# Change the highest frequency shown on the visualizer (up to 24,000hz). 18,000hz is a decent default.
+export visualizer_max_frequency=18000
+
 # Change how the visualizer displays loudness. Possible options are lin, sqrt, cbrt, and log.
 export visualizer_loudness_curve="log"
 
@@ -128,7 +131,7 @@ if [[ ! -f "input.png" ]]; then
 	exit
 fi
 
-export visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/(18000/24000)) }')
+export visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/('$visualizer_max_frequency'/24000)) }')
 
 if [ $render_preview = true ]; then
 	echo "Warn: Creating a low quality uncompressed preview video."
