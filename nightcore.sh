@@ -8,6 +8,9 @@
 # It can normally take a while and a lot of resources for this script to render videos, especially on lower-end hardware. This allows you to generate a quick preview of what the video would look like, and should render fairly quickly, even on low-end hardware.
 export render_preview=false
 
+# Enabling this causes the script to render both a preview and the final video. The render_preview option must be enabled for this to work.
+export preview_and_video=true
+
 # Change the amount that waifu2x upscales the image. Note that setting this too high won't cause issues (as the image is downscaled right after), but will increase processing time.
 # Setting this too low can reduce visual quality if the input image is small. This should be set to at least "1" if the image is 4k, "2" if the image is 1080p, "3" if the image is 720p, or "5" if the image is 480p.
 export waifu2x_scale_ratio=5
@@ -134,18 +137,24 @@ fi
 export visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/('$visualizer_max_frequency'/24000)) }')
 
 if [ $render_preview = true ]; then
-	echo "Warn: Creating a low quality uncompressed preview video."
+	if [ $preview_and_video != true ]; then
+		echo "Warn: Creating a low quality uncompressed preview video."
+	fi
 	process_audio
-	echo "Processing image..."
+	echo "Processing preview image..."
 	ffmpeg -y -v error -i input.png -vf scale=266x154:force_original_aspect_ratio=increase -sws_flags lanczos /tmp/resized.png
-	echo "Creating final video..."
+	echo "Creating preview video..."
 	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:72:0:0,scale=256x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:$((72+($visualizer_crop_amount/15)))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.mkv
 	rm /tmp/resized.png
-	rm /tmp/audio.flac
-	exit
+	if [ $preview_and_video != true ]; then
+		rm /tmp/audio.flac
+		exit
+	fi
 fi
 
-process_audio
+if [[ $render_preview != true || $preview_and_video != true ]]; then
+	process_audio
+fi
 process_image
 create_background_segments
 combine_background_segments
