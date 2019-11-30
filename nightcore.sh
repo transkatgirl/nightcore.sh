@@ -6,13 +6,13 @@
 ##### Tunables:
 
 # It can normally take a while and a lot of resources for this script to render videos, especially on lower-end hardware. This allows you to generate a quick preview of what the video would look like, and should render fairly quickly, even on low-end hardware.
-export render_preview=false
+export render_preview=true
 
 # Enabling this causes the script to render both a preview and the final video. The render_preview option must be enabled for this to work.
 export preview_and_video=true
 
 # Change the amount that waifu2x upscales the image. Note that setting this too high won't cause issues (as the image is downscaled right after), but will increase processing time.
-# Setting this too low can reduce visual quality if the input image is small. This should be set to at least "1" if the image is 4k, "2" if the image is 1080p, "3" if the image is 720p, or "5" if the image is 480p.
+# Setting this too low can reduce visual quality if the input image is small. This should be set to at least "1" if the image is 4k, "2" if the image is 1440p or 1080p, "3" if the image is 720p, "5" if the image is 480p, or "6" if the image is 360p. Avoid using images smaller than 720p whenever possible.
 export waifu2x_scale_ratio=5
 
 # Change the amount that waifu2x denoises the image (0-3). Setting this too low can result in reduced visual quality, while setting it too high can result in added visual artifacts (especially in non-anime images).
@@ -36,9 +36,6 @@ export visualizer_crop_amount=400
 
 # Change the opacity of the visualizer (from 0 to 1). 
 export visualizer_opacity=0.7
-
-# Change the framerate of the video. Higher framerates can result in smoother playback on high-end systems. If you intend to share the video or upload it to streaming sites, setting this higher than 60 is pointless.
-export maximum_video_framerate=60
 
 # Note that there are more tunables at the end of the code.
 
@@ -85,7 +82,7 @@ create_background_segments() {
 			export y=$(($y+$changy))
 
 		done
-		ffmpeg -y -v error -r $maximum_video_framerate -filter_complex "color=black:s=3840x2160[background];movie=/tmp/resized.png[overlay];[background][overlay]overlay=$filterx:$filtery" -t $(($i+1)) -crf 0 -preset ultrafast /tmp/glide-tmp$mi.mp4
+		ffmpeg -y -v error -r 60 -filter_complex "color=black:s=3840x2160[background];movie=/tmp/resized.png[overlay];[background][overlay]overlay=$filterx:$filtery" -t $(($i+1)) -crf 0 -preset ultrafast /tmp/glide-tmp$mi.mp4
 		printf "file /tmp/glide-tmp$mi.mp4\n" >> /tmp/combine.txt
 		export filterx="$(($x-$maxr))"
 		export filtery="$(($y-$maxr))"
@@ -104,7 +101,7 @@ combine_background_segments() {
 # Add an audio visualizer (using /tmp/audio.flac) to the background (/tmp/background.mp4 or /tmp/resized.png). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r $maximum_video_framerate -i /tmp/background.mp4 -i /tmp/audio.flac -filter_complex "[1:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[0:v][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))" -acodec copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+	ffmpeg -y -v error -r 60 -i /tmp/audio.flac -i /tmp/background.mp4 -filter_complex "[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[1:v][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
 	rm /tmp/background.mp4
 	rm /tmp/audio.flac
 }
@@ -144,7 +141,7 @@ if [ $render_preview = true ]; then
 	echo "Processing preview image..."
 	ffmpeg -y -v error -i input.png -vf scale=266x154:force_original_aspect_ratio=increase -sws_flags lanczos /tmp/resized.png
 	echo "Creating preview video..."
-	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:72:0:0,scale=256x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:$((72+($visualizer_crop_amount/15)))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.mkv
+	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:72:0:0,scale=256x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:$((72+($visualizer_crop_amount/15)))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.lossless.mkv
 	rm /tmp/resized.png
 	if [ $preview_and_video != true ]; then
 		rm /tmp/audio.flac
@@ -164,13 +161,10 @@ echo "Compressing final video..."
 ##### End of processing code
 
 # Uncomment this line for lossless video+audio output. Extremely large filesize, should only be used for quick local playback or as input for further encoding steps.
-#cp /tmp/combined.mkv output.lossless.mkv
+cp /tmp/combined.mkv output.lossless.mkv
 
-# Uncomment this line for fast extremely high quality video+audio output. Should only be used for quick local playback.
-ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset veryfast -c:a copy output.lossyfastultrahq.mkv
-
-# Uncomment this line for extremely high quality video+audio output. Recommended for uploading to streaming sites (like YouTube), should never be used for quick sharing (like on online chats or social media).
-#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -profile:v high -level 4.1 -preset slow -movflags +faststart -c:a aac -b:a 320k output.lossyultrahq.mp4
+# Uncomment this line for perceptibly lossless video+audio output. Recommended for uploading to streaming sites (like YouTube), should never be used for quick sharing (like on online chats or social media).
+#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libvpx-vp9 -row-mt 1 -tile-columns 3 -frame-parallel 1 -crf 10 -b:v 0 -quality realtime -speed 5 -c:a libopus -b:a 510k -vbr on -compression_level 10 output.lossyultrahq.webm
 
 # Uncomment this line for high quality video+audio output. Recommended for uploading to streaming sites (like YouTube), should be avoided for quick sharing (like on online chats or social media).
 #ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 18 -s 1920x1080 -sws_flags lanczos -preset slow -profile:v high -level 4.1 -movflags +faststart -c:a aac -b:a 320k output.lossyhq.mp4
@@ -185,7 +179,7 @@ ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 14 -preset veryfast 
 #ffmpeg -y -v error -i /tmp/combined.mkv -vn -acodec copy output.lossless.flac
 
 # Uncomment this line for perceptibly lossless audio-only output. Recommended for quick sharing (like for online chats or social media) or uploads to streaming sites, should be avoided for uploads to streaming sites (like Soundcloud).
-#ffmpeg -y -v error -i /tmp/combined.mkv -vn -acodec libopus -b:a 320k -vbr on -compression_level 10 output.lossyhq.ogg
+#ffmpeg -y -v error -i /tmp/combined.mkv -vn -acodec libopus -b:a 510k -vbr on -compression_level 10 output.lossyhq.ogg
 
 # Uncomment this line for medium quality audio-only output. Recommended for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like Soundcloud).
 #ffmpeg -y -v error -i /tmp/combined.mkv -vn -acodec libopus -b:a 120k -vbr on -compression_level 10 output.lossymq.ogg
