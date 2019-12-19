@@ -20,10 +20,13 @@ export waifu2x_scale_ratio=5
 export waif2x_denoise_amount=3
 
 # Change the colors used in the visualizer.
-export visualizer_colors="0x111111|0x232323"
+export visualizer_colors="0x111111|0x111111"
 
 # Change the number of bars shown on the visualizer. 120 is a decent default.
 export visualizer_bars=120
+
+# Change the FFT size used for the visualizer. Higher sizes are more accurate, but are less responsive. Lower sizes are more response, but less accurate. This number must be a power of 2.
+export visualizer_fft_size=4096
 
 # Change the highest frequency shown on the visualizer (up to 24,000hz). 18,000hz is a decent default.
 export visualizer_max_frequency=18000
@@ -35,7 +38,7 @@ export visualizer_loudness_curve="log"
 export visualizer_crop_amount=400
 
 # Change the opacity of the visualizer (from 0 to 1). 
-export visualizer_opacity=0.7
+export visualizer_opacity=0.8
 
 # Note that there are more tunables at the end of the code.
 
@@ -101,7 +104,7 @@ combine_background_segments() {
 # Add an audio visualizer (using /tmp/audio.flac) to the background (/tmp/background.mp4 or /tmp/resized.png). Output file will be named /tmp/combined.mkv
 add_video_effects() {
 	echo "Creating final video..."
-	ffmpeg -y -v error -r 60 -i /tmp/audio.flac -i /tmp/background.mp4 -filter_complex "[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[1:v][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
+	ffmpeg -y -v error -r 60 -i /tmp/audio.flac -i /tmp/background.mp4 -filter_complex "[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[1:v][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
 	rm /tmp/background.mp4
 	rm /tmp/audio.flac
 }
@@ -141,7 +144,7 @@ if [ $render_preview = true ]; then
 	echo "Processing preview image..."
 	ffmpeg -y -v error -i input.png -vf scale=266x154:force_original_aspect_ratio=increase -sws_flags lanczos /tmp/resized.png
 	echo "Creating preview video..."
-	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=8192:win_func=blackman,crop=$visualizer_bars:72:0:0,scale=256x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:$((72+($visualizer_crop_amount/15)))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.lossless.mkv
+	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=blackman,crop=$visualizer_bars:72:0:0,scale=256x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:$((72+($visualizer_crop_amount/15)))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.lossless.mkv
 	rm /tmp/resized.png
 	if [ $preview_and_video != true ]; then
 		rm /tmp/audio.flac
@@ -167,7 +170,7 @@ cp /tmp/combined.mkv output.lossless.mkv
 #ffmpeg -y -v error -i /tmp/combined.mkv -c:v libvpx-vp9 -row-mt 1 -tile-columns 3 -frame-parallel 1 -crf 10 -b:v 0 -quality realtime -speed 5 -c:a libopus -b:a 510k -vbr on -compression_level 10 output.lossyultrahq.webm
 
 # Uncomment this line for high quality video+audio output. Recommended for uploading to streaming sites (like YouTube), should be avoided for quick sharing (like on online chats or social media).
-#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 18 -s 1920x1080 -sws_flags lanczos -preset slow -profile:v high -level 4.1 -movflags +faststart -c:a aac -b:a 320k output.lossyhq.mp4
+#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libvpx-vp9 -s 1920x1080 -sws_flags lanczos -row-mt 1 -tile-columns 3 -frame-parallel 1 -crf 26 -b:v 0 -quality realtime -speed 5 -c:a libopus -b:a 510k -vbr on -compression_level 10 output.lossyhq.webm
 
 # Uncomment this line for medium quality video+audio output. Recommended for quick sharing (like for online chats or social media), should be avoided for uploads to streaming sites (like YouTube).
 #ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 26 -s 1280x720 -sws_flags lanczos -preset slow -movflags +faststart -c:a aac -b:a 320k output.lossymq.mp4
