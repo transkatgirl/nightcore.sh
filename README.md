@@ -6,7 +6,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - Applies advanced input filtering, to fix common issues (unnecessary silence, slight audio clipping, volume differences between songs) that would usually require manual editing.
 - Designed to work with lossless files, by using lossless encoding in all processing steps. 
 - Preserves audio quality whenever possible by avoiding resampling, using lossless formats internally, and using the high quality SoX resampler whenever resampling is absoutely required.
-- Offers lossless 4k60fps output at tiny filesizes (typically under 32mbit/s bitrates).
+- Offers lossless 4k60fps output at tiny filesizes (typically under 48mbit/s bitrates).
 
 ## Dependencies
 - GNU Coreutils or [untested] Busybox (for running the script)
