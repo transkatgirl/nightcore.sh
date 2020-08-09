@@ -33,7 +33,7 @@ export x265_encoder_preset="slow"
 
 visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/(log('$visualizer_max_frequency')/log(24000))) }')
 ffloglevelstr="-loglevel error -y"
-sxloglevelstr="-V2 -q"
+sxloglevelstr="-V2"
 w2loglevelstr="-v 0"
 afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.wav" "input.wave" "input.caf" "input.mka" "input.opus" "input.ogg" "input.oga" "input.vorbis" "input.spx" "input.m4a" "input.m4b" "input.m4r" "input.mp3" "input.bit" )
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
@@ -53,7 +53,7 @@ fi
 for i in "${afiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing audio..."
-		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 10000000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n
+		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n
 		break
 	fi
 done
