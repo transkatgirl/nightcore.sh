@@ -135,6 +135,12 @@ filtergraph="[0:a]silenceremove=start_threshold=-105dB:start_mode=all:stop_perio
 # Render video with generated filtergraph
 echo "Rendering video..."
 ffmpeg $ffloglevelstr -stats -i /tmp/audio.wav -loop 1 -i /tmp/background.ppm -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
-rm /tmp/background.ppm
 rm /tmp/audio.wav
 
+# Create mp4 with embedded thumbnail
+echo "Finishing up..."
+ffmpeg -i /tmp/background.ppm -vf "scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=3840:2160" /tmp/thumbnail.png
+rm /tmp/background.ppm
+ffmpeg -i output.mkv -i /tmp/thumbnail.png -strict -2 -map 1 -map 0 -c copy -disposition:0 attached_pic -movflags faststart output.mp4
+rm /tmp/thumbnail.png
+rm output.mkv
