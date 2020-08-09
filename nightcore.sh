@@ -20,8 +20,8 @@ export visualizer_max_frequency=4000
 # Change how the visualizer displays loudness. Possible options are lin, sqrt, cbrt, and log.
 export visualizer_loudness_curve="log"
 
-# Change the number of loudness values that are cropped out of the visualizer (1080 total, log scale). 400 is a decent default, but it may need to be changed depending on the loudness curve used.
-export visualizer_crop_amount=400
+# Change the number of loudness values that are cropped out of the visualizer (1080 total, log scale). 200 is a decent default, but it may need to be changed depending on the loudness curve used.
+export visualizer_crop_amount=200
 
 # Change the opacity of the visualizer (from 0 to 1).
 export visualizer_opacity=0.8
@@ -49,7 +49,7 @@ if [[ ! -f "speed.txt" ]]; then
 	exit
 fi
 
-# Remove metadata and speed up audio.
+# Remove metadata, fix clipping, and speed up audio.
 for i in "${afiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing audio..."
@@ -110,7 +110,7 @@ if [[ ! -f "/tmp/background.ppm" ]]; then
 fi
 
 # Create video filtergraph
-echo "Rendering video..."
+echo "Generating filtergraph..."
 x=0
 y=0
 filterx="0"
@@ -123,11 +123,17 @@ for i in $(seq 0 $(soxi -D /tmp/audio.wav | awk '{ print int(($1/4) + 1) }')); d
 	x=$newx
 	y=$newy
 done
-filtergraph="[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+loudnorm=$(ffmpeg -i /tmp/audio.wav -af "loudnorm=print_format=summary" -f null - 2>&1)
+loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
+loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
+loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
+loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
+filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,afade=t=in:ss=0:d=0.4:curve=squ,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))"
 
 # Render video with generated filtergraph
+echo "Rendering video..."
 ffmpeg $ffloglevelstr -stats -i /tmp/audio.wav -loop 1 -i /tmp/background.ppm -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 rm /tmp/background.ppm
 rm /tmp/audio.wav
