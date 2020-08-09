@@ -33,7 +33,7 @@ export x265_encoder_preset="slow"
 
 visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/(log('$visualizer_max_frequency')/log(24000))) }')
 ffloglevelstr="-loglevel error -y"
-sxloglevelstr="-V2"
+sxloglevelstr="-V1"
 w2loglevelstr="-v 0"
 afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.wav" "input.wave" "input.caf" "input.mka" "input.opus" "input.ogg" "input.oga" "input.vorbis" "input.spx" "input.m4a" "input.m4b" "input.m4r" "input.mp3" "input.bit" )
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
@@ -49,11 +49,11 @@ if [[ ! -f "speed.txt" ]]; then
 	exit
 fi
 
-# Remove metadata, fix clipping, and speed up audio.
+# Remove metadata and speed up audio.
 for i in "${afiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing audio..."
-		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s" -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n
+		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k
 		break
 	fi
 done
@@ -123,12 +123,12 @@ for i in $(seq 0 $(soxi -D /tmp/audio.wav | awk '{ print int(($1/4) + 1) }')); d
 	x=$newx
 	y=$newy
 done
-loudnorm=$(ffmpeg -i /tmp/audio.wav -af "loudnorm=print_format=summary" -f null - 2>&1)
+loudnorm=$(ffmpeg -i /tmp/audio.wav -af "adeclip=m=s,loudnorm=print_format=summary" -f null - 2>&1)
 loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
 loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
 loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
 loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
-filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,afade=t=in:ss=0:d=0.4:curve=squ,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,adeclip=m=s,afade=t=in:ss=0:d=0.4:curve=squ,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))"
 
