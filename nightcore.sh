@@ -1,23 +1,9 @@
 #!/bin/bash
 # Made by katattakd. Dependencies: FFMPEG, SoX, GNU Coreutils, waifu2xcpp
-# Note: Make sure your /tmp folder has at least 2GB of free space before running this script. All processing until the final encode is done with lossless H.264 and FLAC, which can result in temporary files using a LOT of space. Temporary files are deleted as soon as they are no longer needed, in order to reduce /tmp usage.
+# Note: Make sure you have at least 4GB of available RAM before running this script.
 # Encoding is purely CPU based, and may take a while on slower CPUs.
 
 ##### Tunables:
-
-# It can normally take a while and a lot of resources for this script to render videos, especially on lower-end hardware. This allows you to generate a quick preview of what the video would look like, and should render fairly quickly, even on low-end hardware.
-export render_preview=true
-
-# Enabling this causes the script to render both a preview and the final video. The render_preview option must be enabled for this to work.
-export preview_and_video=true
-
-# Change the amount that waifu2x upscales the image. Note that setting this too high won't cause issues (as the image is downscaled right after), but will increase processing time.
-# Setting this too low can reduce visual quality if the input image is small. This should be set to at least "1" if the image is 4k, "2" if the image is 1440p or 1080p, "3" if the image is 720p, "5" if the image is 480p, or "6" if the image is 360p. Avoid using images smaller than 720p whenever possible.
-export waifu2x_scale_ratio=5
-
-# Change the amount that waifu2x denoises the image (0-3). Setting this too low can result in reduced visual quality, while setting it too high can result in added visual artifacts (especially in non-anime images).
-# This is set to the highest by default, as it's assumed that the user is using low-resoultion anime-style images. If you are providing high-quality or non-anime images, you may want to reduce this value. 
-export waif2x_denoise_amount=3
 
 # Change the colors used in the visualizer.
 export visualizer_colors="0x111111|0x111111"
@@ -28,163 +14,121 @@ export visualizer_bars=120
 # Change the FFT size used for the visualizer. Higher sizes are more accurate, but are less responsive. Lower sizes are more response, but less accurate. This number must be a power of 2.
 export visualizer_fft_size=4096
 
-# Change the highest frequency shown on the visualizer (up to 24,000hz). 18,000hz is a decent default.
-export visualizer_max_frequency=18000
+# Change the highest frequency shown on the visualizer (up to 24,000hz). 4,000hz is a decent default.
+export visualizer_max_frequency=4000
 
 # Change how the visualizer displays loudness. Possible options are lin, sqrt, cbrt, and log.
 export visualizer_loudness_curve="log"
 
-# Change the number of loudness values that are cropped out of the visualizer (1080 total). 400 is a decent default, but it may need to be changed depending on the loudness curve used.
+# Change the number of loudness values that are cropped out of the visualizer (1080 total, log scale). 400 is a decent default, but it may need to be changed depending on the loudness curve used.
 export visualizer_crop_amount=400
 
-# Change the opacity of the visualizer (from 0 to 1). 
+# Change the opacity of the visualizer (from 0 to 1).
 export visualizer_opacity=0.8
 
-# Note that there are more tunables at the end of the code.
+# Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in a smaller output file.
+export x265_encoder_preset="slow"
 
 ##### Start of code
 
-# Resize input image (input.png), and place processed image at /tmp/resized.png.
-process_image() {
-	echo "Processing image..."
-	waifu2x-converter-cpp -v 0 -c 0 --disable-gpu -m noise-scale --scale-ratio $waifu2x_scale_ratio --noise-level $waif2x_denoise_amount -i input.png -o /tmp/input.png
-	ffmpeg -y -v error -i /tmp/input.png -vf scale=4000x2320:force_original_aspect_ratio=increase -sws_flags lanczos+accurate_rnd+full_chroma_int+full_chroma_inp /tmp/resized.png
-	rm /tmp/input.png
-}
-
-# Speed up input audio (input.flac) by $speed times, and placed processed audio at /tmp/audio.flac.
-process_audio() {
-	echo "Processing audio..."
-	sox input.flac -V1 -q -b 24 --no-dither --guard /tmp/audio.flac --multi-threaded --buffer 128000 speed $speed rate -v -I 48k gain -n
-}
-
-# Create segments of gliding background video, using /tmp/audio.flac and /tmp/resized.png.
-# The list of segments will be named /tmp/combine.txt
-create_background_segments() {
-	echo "Creating background segments..."
-	export x=0
-	export y=0
-	export maxr=60
-	export filterx="0"
-	export filtery="0"
-	for mi in $(seq 0 $(soxi -D /tmp/audio.flac | awk '{ print int(($1/60) + 1) }')); do
-		for i in $(seq 0 60); do
-			if [ $x -gt 0 ]; then
-				export changx=$((($RANDOM % (($maxr*2)-$x))-$maxr))
-			else
-				export changx=$((($RANDOM % (($maxr*2)+$x))-($maxr+$x)))
-			fi
-			if [ $y -gt 0 ]; then
-				export changy=$((($RANDOM % (($maxr*2)-$y))-$maxr))
-			else
-				export changy=$((($RANDOM % (($maxr*2)+$y))-($maxr+$y)))
-			fi
-			filterx="if(gt(t\,$i)\,$(($x-$maxr))+($changx*(sqrt(t-$i)*(sin((t-$i)*PI/2))))\,$filterx)"
-			filtery="if(gt(t\,$i)\,$(($y-$maxr))+($changy*(sqrt(t-$i)*(sin((t-$i)*PI/2))))\,$filtery)"
-			export x=$(($x+$changx))
-			export y=$(($y+$changy))
-
-		done
-		ffmpeg -y -v error -r 60 -filter_complex "color=black:s=3840x2160[background];movie=/tmp/resized.png[overlay];[background][overlay]overlay=$filterx:$filtery" -t $(($i+1)) -crf 0 -preset ultrafast /tmp/glide-tmp$mi.mp4
-		printf "file /tmp/glide-tmp$mi.mp4\n" >> /tmp/combine.txt
-		export filterx="$(($x-$maxr))"
-		export filtery="$(($y-$maxr))"
-	done
-	rm /tmp/resized.png
-}
-
-# Combine segments of gliding background video using /tmp/combine.txt. The output file will be named /tmp/background.mp4.
-combine_background_segments() {
-	echo "Combining background segments..."
-	ffmpeg -y -v error -f concat -safe 0 -i /tmp/combine.txt -c copy /tmp/background.mp4
-	rm /tmp/glide-tmp*.mp4
-	rm /tmp/combine.txt
-}
-
-# Add an audio visualizer (using /tmp/audio.flac) to the background (/tmp/background.mp4 or /tmp/resized.png). Output file will be named /tmp/combined.mkv
-add_video_effects() {
-	echo "Creating final video..."
-	ffmpeg -y -v error -r 60 -i /tmp/audio.flac -i /tmp/background.mp4 -filter_complex "[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];[1:v][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast /tmp/combined.mkv
-	rm /tmp/background.mp4
-	rm /tmp/audio.flac
-}
+visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/(log('$visualizer_max_frequency')/log(24000))) }')
+ffloglevelstr="-loglevel error -y"
+sxloglevelstr="-V2 -q"
+w2loglevelstr="-v 0"
+afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.wav" "input.wave" "input.caf" "input.mka" "input.opus" "input.ogg" "input.oga" "input.vorbis" "input.spx" "input.m4a" "input.m4b" "input.m4r" "input.mp3" "input.bit" )
+vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
+set -euo pipefail
 
 if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v waifu2x-converter-cpp`) ]]; then
 	echo "Please install the required dependencies before attempting to run the script."
 	exit
 fi
-if [ -z $1 ]; then
-	echo "Please pass a speed multiplier to the script (eg. bash nightcore.sh 1.2)."
-	echo "Note that the input files need to be named input.flac and input.png for the script to detect them."
+
+if [[ ! -f "speed.txt" ]]; then
+	echo "Please create a speed.txt file stating the speed multiplier you want to use (like 1.1 or 1.2)."
 	exit
 fi
 
-if [[ ! -f "input.flac" ]]; then
-	echo "A necessary input file is missing."
-	exit
-fi
-
-export speed=$1
-set -euo pipefail
-
-if [[ ! -f "input.png" ]]; then
-	echo "Warn: Unable to find image, creating audio-only output."
-	process_audio
-	mv /tmp/audio.flac "output.lossless.flac"
-	exit
-fi
-
-export visualizer_total_bars=$(awk 'BEGIN{ print int('$visualizer_bars'/('$visualizer_max_frequency'/24000)) }')
-
-if [ $render_preview = true ]; then
-	if [ $preview_and_video != true ]; then
-		echo "Warn: Creating a low quality uncompressed preview video."
+# Remove metadata and speed up audio.
+for i in "${afiletypes[@]}"; do
+	if [[ -f "$i" ]]; then
+		echo "Processing audio..."
+		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 10000000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n
+		break
 	fi
-	process_audio
-	echo "Processing preview image..."
-	ffmpeg -y -v error -i input.png -vf scale=266x154:force_original_aspect_ratio=increase -sws_flags lanczos /tmp/resized.png
-	echo "Creating preview video..."
-	ffmpeg -y -v error -r 25 -i /tmp/audio.flac -filter_complex "showfreqs=s=$(($visualizer_total_bars))x72:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=blackman,crop=$visualizer_bars:72:0:0,scale=256x72:sws_flags=neighbor,setsar=0,format=yuva420p,colorchannelmixer=aa=$visualizer_opacity[visualizer];movie=/tmp/resized.png,crop=256:144:5:5[background];[background][visualizer]overlay=0:$((72+($visualizer_crop_amount/15)))" -c:a copy -vcodec libx264 -crf:v 0 -preset ultrafast preview.lossless.mkv
-	rm /tmp/resized.png
-	if [ $preview_and_video != true ]; then
-		rm /tmp/audio.flac
-		exit
+done
+
+if [[ ! -f "/tmp/audio.wav" ]]; then
+	echo "Input audio is required! File must be named input.(extension)"
+	exit
+fi
+
+# Remove metadata and AI upscale image.
+for i in "${vfiletypes[@]}"; do
+	if [[ -f "$i" ]]; then
+		echo "Processing image..."
+		width=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=width "$i")
+		height=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=height "$i")
+		if [ "$width" -ge "4000" ] && [ "$height" -ge "2320" ]; then
+			w2x_denoise=1
+			w2x_scale=1
+		elif [ "$width" -ge "2000" ] && [ "$height" -ge "1160" ]; then
+			w2x_denoise=2
+			w2x_scale=2
+		elif [ "$width" -ge "1334" ] && [ "$height" -ge "774" ]; then
+			w2x_denoise=2
+			w2x_scale=3
+		elif [ "$width" -ge "1000" ] && [ "$height" -ge "580" ]; then
+			w2x_denoise=3
+			w2x_scale=4
+		elif [ "$width" -ge "800" ] && [ "$height" -ge "464" ]; then
+			w2x_denoise=3
+			w2x_scale=5
+		elif [ "$width" -ge "667" ] && [ "$height" -ge "387" ]; then
+			w2x_denoise=3
+			w2x_scale=6
+		elif [ "$width" -ge "572" ] && [ "$height" -ge "332" ]; then
+			w2x_denoise=3
+			w2x_scale=7
+		elif [ "$width" -ge "500" ] && [ "$height" -ge "290" ]; then
+			w2x_denoise=3
+			w2x_scale=8
+		else
+			echo "Input image is too small!"
+			exit
+		fi
+		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 /tmp/input.ppm
+		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $w2x_denoise -i /tmp/input.ppm -o /tmp/background.ppm
+		rm /tmp/input.ppm
+		break
 	fi
+done
+
+if [[ ! -f "/tmp/background.ppm" ]]; then
+	echo "Input image is required! File must be named input.(extension)"
+	exit
 fi
 
-if [[ $render_preview != true || $preview_and_video != true ]]; then
-	process_audio
-fi
-process_image
-create_background_segments
-combine_background_segments
-add_video_effects
-echo "Compressing final video..."
+# Create video filtergraph
+echo "Rendering video..."
+x=0
+y=0
+filterx="0"
+filtery="0"
+for i in $(seq 0 $(soxi -D /tmp/audio.wav | awk '{ print int(($1/4) + 1) }')); do
+	newx=$((($RANDOM % (120-$x))))
+	newy=$((($RANDOM % (120-$y))))
+	filterx="if(gt(t/4\,$i)\,$x+($(($newx-$x))*(sqrt((t/4)-$i)*(sin(((t/4)-$i)*PI/2))))\,$filterx)"
+	filtery="if(gt(t/4\,$i)\,$y+($(($newy-$y))*(sqrt((t/4)-$i)*(sin(((t/4)-$i)*PI/2))))\,$filtery)"
+	x=$newx
+	y=$newy
+done
+filtergraph="[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+[1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=3840:2160:$filterx:$filtery[background];
+[background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))"
 
-##### End of processing code
+# Render video with generated filtergraph
+ffmpeg $ffloglevelstr -stats -i /tmp/audio.wav -loop 1 -i /tmp/background.ppm -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+rm /tmp/background.ppm
+rm /tmp/audio.wav
 
-# Uncomment this line for lossless video+audio output. Extremely large filesize, should only be used for quick local playback or as input for further encoding steps.
-cp /tmp/combined.mkv output.lossless.mkv
-
-# Uncomment this line for perceptibly lossless video+audio output. Recommended for uploading to streaming sites (like YouTube), should never be used for quick sharing (like on online chats or social media).
-#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libvpx-vp9 -row-mt 1 -tile-columns 3 -frame-parallel 1 -crf 10 -b:v 0 -quality realtime -speed 5 -c:a libopus -b:a 510k -vbr on -compression_level 10 output.lossyultrahq.webm
-
-# Uncomment this line for high quality video+audio output. Recommended for uploading to streaming sites (like YouTube), should be avoided for quick sharing (like on online chats or social media).
-#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libvpx-vp9 -s 1920x1080 -sws_flags lanczos -row-mt 1 -tile-columns 3 -frame-parallel 1 -crf 26 -b:v 0 -quality realtime -speed 5 -c:a libopus -b:a 510k -vbr on -compression_level 10 output.lossyhq.webm
-
-# Uncomment this line for medium quality video+audio output. Recommended for quick sharing (like for online chats or social media), should be avoided for uploads to streaming sites (like YouTube).
-#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 26 -s 1280x720 -sws_flags lanczos -preset slow -movflags +faststart -c:a aac -b:a 320k output.lossymq.mp4
-
-# Uncomment this line for low quality video+audio output. Can be useful for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like YouTube).
-#ffmpeg -y -v error -i /tmp/combined.mkv -c:v libx264 -crf:v 33 -s 640x360 -r 30 -sws_flags lanczos -preset slow -movflags +faststart -c:a aac -b:a 128k output.lossylq.mp4
-
-# Uncomment this line for lossless audio-only output. Recommended for quick local playback or uploads to streaming sites, should be avoided for quick sharing (like on online chats or social media).
-#ffmpeg -y -v error -i /tmp/combined.mkv -vn -acodec copy output.lossless.flac
-
-# Uncomment this line for perceptibly lossless audio-only output. Recommended for quick sharing (like for online chats or social media) or uploads to streaming sites, should be avoided for uploads to streaming sites (like Soundcloud).
-#ffmpeg -y -v error -i /tmp/combined.mkv -vn -acodec libopus -b:a 510k -vbr on -compression_level 10 output.lossyhq.ogg
-
-# Uncomment this line for medium quality audio-only output. Recommended for quick sharing in space-limited cases, should never be used for uploads to streaming sites (like Soundcloud).
-#ffmpeg -y -v error -i /tmp/combined.mkv -vn -acodec libopus -b:a 120k -vbr on -compression_level 10 output.lossymq.ogg
-
-rm /tmp/combined.mkv
