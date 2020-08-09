@@ -123,7 +123,7 @@ for i in $(seq 0 $(soxi -D /tmp/audio.wav | awk '{ print int(($1/4) + 1) }')); d
 	x=$newx
 	y=$newy
 done
-filtergraph="[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=blackman,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+filtergraph="[0:a]showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))"
 
