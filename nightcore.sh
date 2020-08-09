@@ -129,18 +129,12 @@ loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
 loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
 loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
 filtergraph="[0:a]silenceremove=start_threshold=-105dB:start_mode=all:stop_periods=-1,loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,adeclip=m=s,afade=t=in:ss=0:d=0.4:curve=squ,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
-[1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=3840:2160:$filterx:$filtery[background];
-[background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount))"
+[1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=4000:2320,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
+[background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount)):format=rgb"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
-ffmpeg $ffloglevelstr -stats -i /tmp/audio.wav -loop 1 -i /tmp/background.ppm -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+ffmpeg $ffloglevelstr -stats -i /tmp/audio.wav -i /tmp/background.ppm -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+rm /tmp/background.ppm
 rm /tmp/audio.wav
 
-# Create mp4 with embedded thumbnail
-echo "Finishing up..."
-ffmpeg -i /tmp/background.ppm -vf "scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=3840:2160" /tmp/thumbnail.png
-rm /tmp/background.ppm
-ffmpeg -i output.mkv -i /tmp/thumbnail.png -strict -2 -map 1 -map 0 -c copy -disposition:0 attached_pic -movflags faststart output.mp4
-rm /tmp/thumbnail.png
-rm output.mkv
