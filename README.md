@@ -5,7 +5,8 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - Creates visual effects (a gliding background and audio visualizer) using only FFMPEG.
 - Applies advanced input filtering, to fix common issues (unnecessary silence, slight audio clipping, volume differences between songs) that would usually require manual editing.
 - Designed to work with lossless files, by using lossless encoding in all processing steps. 
-- Preserves audio quality whenever possible by avoiding resampling, using lossless formats internally, and using the high quality SoX resampler whenever resampling is absoutely required.
+- Preserves audio quality whenever possible by avoiding resampling, using lossless formats and using the high quality SoX resampler whenever resampling is absoutely required.
+- Preserves video quality whenever possible by using lossless formats and avoiding RGB to YUV conversion.
 - Offers lossless 4k60fps output at tiny filesizes (typically under 48mbit/s bitrates).
 
 ## Dependencies
