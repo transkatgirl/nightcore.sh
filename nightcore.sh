@@ -53,7 +53,7 @@ fi
 for i in "${afiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing audio..."
-		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n
+		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s" -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n
 		break
 	fi
 done
