@@ -5,6 +5,9 @@
 
 ##### Tunables:
 
+# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in significant loss of detail in non-anime images.
+export waifu2x_denoise_amount=3
+
 # Change the colors used in the visualizer.
 export visualizer_colors="0x111111|0x111111"
 
@@ -70,35 +73,27 @@ for i in "${vfiletypes[@]}"; do
 		width=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=width "$i")
 		height=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=height "$i")
 		if [ "$width" -ge "4000" ] && [ "$height" -ge "2320" ]; then
-			w2x_denoise=1
 			w2x_scale=1
 		elif [ "$width" -ge "2000" ] && [ "$height" -ge "1160" ]; then
-			w2x_denoise=2
 			w2x_scale=2
 		elif [ "$width" -ge "1334" ] && [ "$height" -ge "774" ]; then
-			w2x_denoise=2
 			w2x_scale=3
 		elif [ "$width" -ge "1000" ] && [ "$height" -ge "580" ]; then
-			w2x_denoise=3
 			w2x_scale=4
 		elif [ "$width" -ge "800" ] && [ "$height" -ge "464" ]; then
-			w2x_denoise=3
 			w2x_scale=5
 		elif [ "$width" -ge "667" ] && [ "$height" -ge "387" ]; then
-			w2x_denoise=3
 			w2x_scale=6
 		elif [ "$width" -ge "572" ] && [ "$height" -ge "332" ]; then
-			w2x_denoise=3
 			w2x_scale=7
 		elif [ "$width" -ge "500" ] && [ "$height" -ge "290" ]; then
-			w2x_denoise=3
 			w2x_scale=8
 		else
 			echo "Input image is too small!"
 			exit
 		fi
 		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 /tmp/input.ppm
-		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $w2x_denoise -i /tmp/input.ppm -o /tmp/background.ppm
+		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i /tmp/input.ppm -o /tmp/background.ppm
 		rm /tmp/input.ppm
 		break
 	fi
@@ -128,7 +123,7 @@ loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
 loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
 loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
 loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
-filtergraph="[0:a]silenceremove=start_threshold=-105dB:start_mode=all:stop_periods=-1,loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,adeclip=m=s,afade=t=in:ss=0:d=0.4:curve=squ,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+filtergraph="[0:a]silenceremove=start_threshold=-105dB:start_mode=all:stop_periods=-1,loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,adeclip=m=s,afade=t=in:ss=0:d=0.5:curve=squ,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=4000:2320,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount)):format=rgb"
 
