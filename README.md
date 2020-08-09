@@ -5,7 +5,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - Creates visual effects (a gliding background and audio visualizer) using only FFMPEG
 - Designed to work with lossless files, by using lossless encoding in all processing steps. 
 - Preserves audio quality whenever possible by avoiding resampling, using lossless formats internally, and using the high quality SoX resampler whenever resampling is absoutely required.
-- Offers lossless 4k60fps output at tiny filesizes (typically less than 1mb/s).
+- Offers lossless 4k60fps output at tiny filesizes (typically around 1mb/s).
 
 ## Dependencies
 - GNU Coreutils or [untested] Busybox (for running the script)
