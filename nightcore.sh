@@ -40,10 +40,12 @@ if [[ ! -f "speed.txt" ]]; then
 fi
 
 # Remove metadata, fix clipping, and speed up audio.
+# Note: Fixing of clipped samples is done before all other effects, so that all clipped samples are detected properly.
+# Silence removal must be done ahead of time, or it will cause video sync issues. Fade-in must be done before silence removal, and after speed adjustment, to prevent timing issues.
 for i in "${afiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing audio..."
-		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s,afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-105dB:start_mode=all:stop_periods=-1" -f sox - | sox $sxloglevelstr -p /tmp/audio.wav --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n
+		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-95dB:start_mode=all:stop_periods=-1" /tmp/audio.wav
 		break
 	fi
 done
@@ -53,11 +55,11 @@ if [[ ! -f "/tmp/audio.wav" ]]; then
 	exit
 fi
 
-# Remove metadata, crop image to 16:9, and AI upscale image.
+# Remove metadata and AI upscale image.
 for i in "${vfiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing image..."
-		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 -vf "crop=iw:round((iw/16)*9)" /tmp/input.ppm
+		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 /tmp/input.ppm
 		width=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=width /tmp/input.ppm)
 		height=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=height /tmp/input.ppm)
 		if [ "$width" -ge "4000" ] && [ "$height" -ge "2320" ]; then
@@ -111,8 +113,8 @@ loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
 loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
 loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
 loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
-filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=38dB*a_weighting(f):bar_g=7:endfreq=16000:count=30:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
-[1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
+filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=38dB*a_weighting(f):bar_g=7:endfreq=16000:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+[1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=4000:2320,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:format=rgb"
 
 # Render video with generated filtergraph
