@@ -5,7 +5,7 @@
 
 ##### Tunables:
 
-# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in significant loss of detail in non-anime images.
+# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images.
 export waifu2x_denoise_amount=3
 
 # Change the colors used in the visualizer.
@@ -29,7 +29,7 @@ export visualizer_crop_amount=200
 # Change the opacity of the visualizer (from 0 to 1).
 export visualizer_opacity=0.8
 
-# Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in a smaller output file.
+# Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
 
 ##### Start of code
@@ -123,7 +123,7 @@ loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
 loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
 loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
 loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
-filtergraph="[0:a]silenceremove=start_threshold=-115dB:start_mode=all:stop_periods=-1,loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,adeclip=m=s,afade=t=in:ss=0:d=0.5:curve=squ,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+filtergraph="[0:a]afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-115dB:start_mode=all:stop_periods=-1,loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,adeclip=m=s,showfreqs=s=$(($visualizer_total_bars))x1080:mode=bar:ascale=$visualizer_loudness_curve:fscale=log:colors=$visualizer_colors:win_size=$visualizer_fft_size:win_func=bharris,crop=$visualizer_bars:1080:0:0,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=4000:2320,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=$((1080+$visualizer_crop_amount)):format=rgb"
 
