@@ -113,7 +113,7 @@ loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
 loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
 loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
 loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
-filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=38dB*a_weighting(f):bar_g=7:endfreq=16000:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=38dB*a_weighting(f):bar_g=7:count=30:endfreq=16000:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=4000:2320,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:format=rgb"
 
