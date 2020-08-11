@@ -1,6 +1,6 @@
 #!/bin/bash
-# Made by katattakd. Dependencies: FFMPEG, SoX, GNU Coreutils, waifu2xcpp
-# Note: Make sure you have at least 4GB of available RAM before running this script.
+# Made by katattakd. Dependencies: FFMPEG, SoX, ImageMagick, GNU Coreutils, waifu2xcpp
+# Note: Make sure you have at least 6GB of available RAM before running this script.
 # Encoding is purely CPU based, and may take a while on slower CPUs.
 
 ##### Tunables:
@@ -20,13 +20,14 @@ export x265_encoder_preset="slow"
 ##### Start of code
 
 ffloglevelstr="-loglevel error -y"
+fploglevelstr="-loglevel error -of csv=p=0"
 sxloglevelstr="-V1"
 w2loglevelstr="-v 0"
 afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.wav" "input.wave" "input.caf" "input.mka" "input.opus" "input.ogg" "input.oga" "input.vorbis" "input.spx" "input.m4a" "input.m4b" "input.m4r" "input.mp3" "input.bit" )
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
 set -euo pipefail
 
-if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v waifu2x-converter-cpp`) ]]; then
+if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v magick` && `command -v waifu2x-converter-cpp`) ]]; then
 	echo "Please install the required dependencies before attempting to run the script."
 	exit
 fi
@@ -52,20 +53,31 @@ if [[ ! -f "/tmp/audio.wav" ]]; then
 	exit
 fi
 
-# Remove metadata and AI upscale image.
+# Remove metadata, trim image, AI upscale image, and crop image to 4000x2320.
+# Note: Image trimming must be done before upscaling, to ensure final image is >=4000x2320.
+# Image cropping must be done after upscaling, to ensure input image >=4000x2320.
 for i in "${vfiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing image..."
-		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 /tmp/input.ppm
-		width_scale=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=width /tmp/input.ppm | awk '{ print int((4000/$1)+1) }')
-		height_scale=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=height /tmp/input.ppm | awk '{ print int((2320/$1)+1) }')
+		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 -vcodec ppm -f image2pipe - | magick - -fuzz 1% -trim /tmp/input.ppm
+		width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width /tmp/input.ppm)
+		width_scale=$(echo "$width" | awk '{ print int((4000/$1)+1) }')
+		height=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height /tmp/input.ppm)
+		height_scale=$(echo "$height" | awk '{ print int((2320/$1)+1) }')
 		if [ "$width_scale" -ge "$height_scale" ]; then
-			w2x_scale=$width_scale;
+			w2x_scale=$width_scale
 		else
-			w2x_scale=$height_scale;
+			w2x_scale=$height_scale
 		fi
-		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i /tmp/input.ppm -o /tmp/background.ppm
+		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i /tmp/input.ppm -o /tmp/upscaled.ppm
 		rm /tmp/input.ppm
+		if [ $(echo $width $height | awk '{ print int(($1/$2)*100) }') -gt 130 ]; then
+			gravity="Center"
+		else
+			gravity="North"
+		fi
+		magick /tmp/upscaled.ppm -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage /tmp/background.ppm
+		rm /tmp/upscaled.ppm
 		break
 	fi
 done
@@ -95,12 +107,12 @@ loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
 loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
 loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
 filtergraph="[0:a]loudnorm=linear=true:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=38dB*a_weighting(f):bar_g=7:count=30:endfreq=12500:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
-[1:v]scale=4000x2320:force_original_aspect_ratio=increase:sws_flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp+bitexact,crop=4000:2320,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
+[1:v]crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:format=rgb"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
-ffmpeg $ffloglevelstr -stats -i /tmp/audio.wav -i /tmp/background.ppm -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+ffmpeg $ffloglevelstr -stats -i /tmp/audio.wav -loop 1 -i /tmp/background.ppm -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 rm /tmp/background.ppm
 rm /tmp/audio.wav
 
