@@ -26,7 +26,7 @@ afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
 set -euo pipefail
 
-if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v waifu2x-converter-cpp`) ]]; then
+if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v waifu2x-converter-cpp`) ]]; then
 	echo "Please install the required dependencies before attempting to run the script."
 	exit
 fi
@@ -57,28 +57,12 @@ for i in "${vfiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
 		echo "Processing image..."
 		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 /tmp/input.ppm
-		width=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=width /tmp/input.ppm)
-		height=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=height /tmp/input.ppm)
-		if [ "$width" -ge "4000" ] && [ "$height" -ge "2320" ]; then
-			w2x_scale=1
-		elif [ "$width" -ge "2000" ] && [ "$height" -ge "1160" ]; then
-			w2x_scale=2
-		elif [ "$width" -ge "1334" ] && [ "$height" -ge "774" ]; then
-			w2x_scale=3
-		elif [ "$width" -ge "1000" ] && [ "$height" -ge "580" ]; then
-			w2x_scale=4
-		elif [ "$width" -ge "800" ] && [ "$height" -ge "464" ]; then
-			w2x_scale=5
-		elif [ "$width" -ge "667" ] && [ "$height" -ge "387" ]; then
-			w2x_scale=6
-		elif [ "$width" -ge "572" ] && [ "$height" -ge "332" ]; then
-			w2x_scale=7
-		elif [ "$width" -ge "500" ] && [ "$height" -ge "290" ]; then
-			w2x_scale=8
+		width_scale=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=width /tmp/input.ppm | awk '{ print int((4000/$1)+1) }')
+		height_scale=$(ffprobe -v 0 -of csv=p=0 -select_streams v:0 -show_entries stream=height /tmp/input.ppm | awk '{ print int((2320/$1)+1) }')
+		if [ "$width_scale" -ge "$height_scale" ]; then
+			w2x_scale=$width_scale;
 		else
-			echo "Input image is too small!"
-			rm /tmp/input.ppm
-			exit
+			w2x_scale=$height_scale;
 		fi
 		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i /tmp/input.ppm -o /tmp/background.ppm
 		rm /tmp/input.ppm
