@@ -13,6 +13,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - GNU Coreutils or [untested] Busybox (for running the script)
 - Bash (for running the script)
 - FFMPEG (for encoding the video)
+- ImageMagick (for encoding the image)
 - SoX (for encoding the audio)
 - Waifu2xcpp (for better image upscaling)
 
@@ -23,7 +24,7 @@ Once the script is configured, name your input files `input.flac` and `input.png
 
 Useful speed multipliers range from 1.1 to 1.3, different songs will likely need to be set to different speeds.
 
-When running the script, please make sure you have at least 4GB of available system RAM.
+When running the script, please make sure you have at least 6GB of available system RAM.
 
 ## Demos
 Want to see what this script is capable of? Some demo videos are posted below.
