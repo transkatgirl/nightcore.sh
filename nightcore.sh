@@ -118,7 +118,6 @@ if [[ ! -f "$image_output" ]]; then
 fi
 
 # Create video filtergraph
-echo "Rendering video..."
 x=0
 y=0
 filterx="0"
@@ -131,11 +130,12 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	x=$newx
 	y=$newy
 done
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=38dB*a_weighting(f):bar_g=7:count=30:endfreq=12500:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=20dB*a_weighting(f):bar_g=7:endfreq=12500:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:format=rgb"
 
 # Render video with generated filtergraph
+echo "Rendering video..."
 ffmpeg $ffloglevelstr -stats -i $audio_output -loop 1 -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 rm $image_output
 rm $audio_output
