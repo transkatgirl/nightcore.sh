@@ -130,7 +130,7 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	x=$newx
 	y=$newy
 done
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=20dB*a_weighting(f):bar_g=7:endfreq=12500:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=24dB*a_weighting(f):bar_g=7:endfreq=12500:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
 [1:v]crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:format=rgb"
 
