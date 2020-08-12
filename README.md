@@ -7,7 +7,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - Designed to work with lossless files, by using lossless encoding in all processing steps. 
 - Preserves audio quality whenever possible by avoiding resampling, using lossless formats and using the high quality SoX resampler whenever resampling is absoutely required.
 - Preserves video quality whenever possible by using lossless formats and avoiding RGB to YUV conversion.
-- Offers lossless 4k60fps output at reasonable filesizes (typically under 64mbit/s bitrates).
+- Offers lossless 4k60fps output at reasonable filesizes.
 
 ## Dependencies
 - GNU Coreutils or [untested] Busybox (for running the script)
