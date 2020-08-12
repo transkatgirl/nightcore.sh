@@ -141,8 +141,11 @@ filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v
 # Render video with generated filtergraph
 echo "Rendering video..."
 ffmpeg $ffloglevelstr -stats -i $audio_output -loop 1 -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
-rm $image_output
 rm $audio_output
+
+# Create video thumbnail
+magick $image_output -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 -quality 100 output.thumbnail.png
+rm $image_output
 
 # Clean up temporary directory
 rm -rf $tmpdir
