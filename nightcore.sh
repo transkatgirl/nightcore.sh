@@ -120,7 +120,6 @@ for i in "${afiletypes[@]}"; do
 done
 
 sleep 0.1
-
 if [[ ! -f "$audio_begin" ]]; then
 	echo "Input audio is required! File must be named input.(extension)"
 	exit
@@ -137,7 +136,6 @@ for i in "${vfiletypes[@]}"; do
 done
 
 sleep 0.1
-
 if [[ ! -f "$image_begin" ]]; then
 	echo "Input image is required! File must be named input.(extension)"
 	exit
@@ -168,9 +166,9 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	x=$newx
 	y=$newy
 done
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=7:endfreq=12500:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,scale=3840x1080:sws_flags=neighbor,setsar=0,format=rgba,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity[visualizer];
-[1:v]crop=3840:2160:$filterx:$filtery[background];
-[background][visualizer]overlay=shortest=1:x=0:y=1080:format=rgb"
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=7:endfreq=12500:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,colorchannelmixer=aa=$visualizer_opacity,scale=3840x1080:sws_flags=neighbor[visualizer];
+[1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
+[background][visualizer]overlay=shortest=1:x=0:y=1080:format=gbrp"
 
 # Wait for image processing to complete
 while [[ ! -f "$image_end" ]]; do
@@ -180,7 +178,7 @@ rm "$image_end"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
-ffmpeg $ffloglevelstr -stats -i $audio_output -loop 1 -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 rm $audio_output
 rm $image_output
 
