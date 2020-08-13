@@ -47,75 +47,109 @@ if [ "$seperate_instances" = true ]; then
 fi
 rm -rf $tmpdir
 mkdir -p $tmpdir
-audio_stage1="$tmpdir/stage1.wav"
-audio_output="$tmpdir/output.wav"
-image_stage1="$tmpdir/stage1.ppm"
-image_stage2="$tmpdir/stage2.ppm"
-image_output="$tmpdir/output.ppm"
+
+echo "Processing input files..."
 
 # Remove metadata, fix clipping, speed up audio, and normalize volume.
 # Note: Fixing of clipped samples is done before all other effects, so that all clipped samples are detected properly.
 # Fade-in must be done before silence removal, and after speed adjustment, to prevent timing issues.
 # Loudness normalization must be done last, and cannot be combined with other encoding passes.
-for i in "${afiletypes[@]}"; do
-	if [[ -f "$i" ]]; then
-		echo "Processing audio..."
-		ffmpeg $ffloglevelstr -i $i -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$(cat speed.txt)" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-95dB:start_mode=all:stop_periods=-1" $audio_stage1
+audio_begin="$tmpdir/begin_audio"
+audio_end="$tmpdir/finish_audio"
+audio_stage1="$tmpdir/stage1.wav"
+audio_output="$tmpdir/output.wav"
+function process_audio {
+	touch $audio_begin
 
-		loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-16" -f null - 2>&1)
-		loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
-		loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
-		loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
-		loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
-		ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-16:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh" $audio_output
+	ffmpeg $ffloglevelstr -i "$1" -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-95dB:start_mode=all:stop_periods=-1" $audio_stage1
 
-		rm $audio_stage1
-		break
-	fi
-done
+	loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-16" -f null - 2>&1)
+	loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
+	loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
+	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
+	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
+	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-16:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh" $audio_output
 
-if [[ ! -f "$audio_output" ]]; then
-	echo "Input audio is required! File must be named input.(extension)"
-	exit
-fi
+	rm $audio_stage1
+	touch $audio_end
+}
 
 # Remove metadata, trim image, AI upscale image, and crop image to 4000x2320.
 # Note: Image trimming must be done before upscaling, to ensure final image is >=4000x2320.
 # Image cropping must be done after upscaling, to ensure input image >=4000x2320.
-for i in "${vfiletypes[@]}"; do
+image_begin="$tmpdir/begin_image"
+image_end="$tmpdir/finish_image"
+image_stage1="$tmpdir/stage1.ppm"
+image_stage2="$tmpdir/stage2.ppm"
+image_output="$tmpdir/output.ppm"
+image_output_thumbnail="output.thumbnail.png"
+function process_image {
+	touch $image_begin
+	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec ppm -f image2pipe - | magick - -fuzz 1% -trim $image_stage1
+
+	width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
+	width_scale=$(echo "$width" | awk '{ print int((4000/$1)+1) }')
+	height=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height $image_stage1)
+	height_scale=$(echo "$height" | awk '{ print int((2320/$1)+1) }')
+	if [ "$width_scale" -ge "$height_scale" ]; then
+		w2x_scale=$width_scale
+	else
+		w2x_scale=$height_scale
+	fi
+	waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
+
+	rm $image_stage1
+
+	if [ $(echo $width $height | awk '{ print int(($1/$2)*100) }') -gt 130 ]; then
+		gravity="Center"
+	else
+		gravity="North"
+	fi
+	magick $image_stage2 -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage $image_output
+
+	touch $image_end
+	rm $image_stage2
+	magick $image_output -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 -quality 100 $image_output_thumbnail
+}
+
+for i in "${afiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
-		echo "Processing image..."
-		ffmpeg $ffloglevelstr -i $i -an -vframes 1 -map_metadata -1 -vcodec ppm -f image2pipe - | magick - -fuzz 1% -trim $image_stage1
-
-		width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
-		width_scale=$(echo "$width" | awk '{ print int((4000/$1)+1) }')
-		height=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height $image_stage1)
-		height_scale=$(echo "$height" | awk '{ print int((2320/$1)+1) }')
-		if [ "$width_scale" -ge "$height_scale" ]; then
-			w2x_scale=$width_scale
-		else
-			w2x_scale=$height_scale
-		fi
-		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
-
-		rm $image_stage1
-
-		if [ $(echo $width $height | awk '{ print int(($1/$2)*100) }') -gt 130 ]; then
-			gravity="Center"
-		else
-			gravity="North"
-		fi
-		magick $image_stage2 -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage $image_output
-
-		rm $image_stage2
+		process_audio "$i" "$(cat speed.txt)" &
 		break
 	fi
 done
 
-if [[ ! -f "$image_output" ]]; then
+sleep 0.1
+
+if [[ ! -f "$audio_begin" ]]; then
+	echo "Input audio is required! File must be named input.(extension)"
+	exit
+else
+	rm "$audio_begin"
+fi
+
+
+for i in "${vfiletypes[@]}"; do
+	if [[ -f "$i" ]]; then
+		process_image $i &
+		break
+	fi
+done
+
+sleep 0.1
+
+if [[ ! -f "$image_begin" ]]; then
 	echo "Input image is required! File must be named input.(extension)"
 	exit
+else
+	rm "$image_begin"
 fi
+
+# Wait for audio processing to complete
+while [[ ! -f "$audio_end" ]]; do
+	sleep 0.1
+done
+rm $audio_end
 
 # Create video filtergraph
 x=0
@@ -138,13 +172,16 @@ filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v
 [1:v]crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:format=rgb"
 
+# Wait for image processing to complete
+while [[ ! -f "$image_end" ]]; do
+	sleep 0.1
+done
+rm "$image_end"
+
 # Render video with generated filtergraph
 echo "Rendering video..."
 ffmpeg $ffloglevelstr -stats -i $audio_output -loop 1 -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 rm $audio_output
-
-# Create video thumbnail
-magick $image_output -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 -quality 100 output.thumbnail.png
 rm $image_output
 
 # Clean up temporary directory
