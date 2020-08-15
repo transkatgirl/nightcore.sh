@@ -14,9 +14,6 @@ export waifu2x_denoise_amount=2
 # Change the number of bars shown on the visualizer.
 export visualizer_bars=100
 
-# Change the opacity of the visualizer (from 0 to 1).
-export visualizer_opacity=0.75
-
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
 
@@ -40,6 +37,7 @@ if [[ ! -f "speed.txt" ]]; then
 	echo "Please create a speed.txt file stating the speed multiplier you want to use (like 1.1 or 1.2)."
 	exit
 fi
+audio_speed=$(cat speed.txt)
 
 # Initalize temporary directory.
 if [ "$seperate_instances" = true ]; then
@@ -114,7 +112,7 @@ function process_image {
 
 for i in "${afiletypes[@]}"; do
 	if [[ -f "$i" ]]; then
-		process_audio "$i" "$(cat speed.txt)" &
+		process_audio "$i" "$audio_speed" &
 		break
 	fi
 done
@@ -166,8 +164,9 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	x=$newx
 	y=$newy
 done
-visualizer_alpha=$(echo $visualizer_opacity | awk '{ print $1 * 255 }')
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=7:endfreq=16000:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,$visualizer_alpha\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+visualizer_start=$(echo $audio_speed | awk '{ print $1 * 20 }')
+visualizer_end=$(echo $audio_speed | awk '{ print $1 * 12500 }')
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=7:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,200\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
