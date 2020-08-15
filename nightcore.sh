@@ -59,12 +59,13 @@ function process_audio {
 
 	ffmpeg $ffloglevelstr -i "$1" -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-95dB:start_mode=all:stop_periods=-1" $audio_stage1
 
-	loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-16" -f null - 2>&1)
-	loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated" | awk '{ print $3 }')
-	loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak" | awk '{ print $4 }')
-	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA" | awk '{ print $3 }')
-	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold" | awk '{ print $3 }')
-	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-16:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh" $audio_output
+	loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-16:lra=20" -f null - 2>&1)
+	loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated:" | awk '{ print $3+0 }')
+	loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak:" | awk '{ print $4+0 }')
+	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA:" | awk '{ print $3+0 }')
+	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold:" | awk '{ print $3+0 }')
+	loudnorm_offset=$(echo "$loudnorm" | grep "Target Offset:" | awk '{ print $3+0 }')
+	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-16:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" $audio_output
 
 	rm $audio_stage1
 	touch $audio_end
