@@ -5,8 +5,9 @@
 
 ##### Tunables:
 
-# Allow multiple instances of the Nightcore.sh script to run at the same time. Note that this can result in a build-up of temporary files if the script crashes, so this should only be enabled if you need it.
-export seperate_instances=false
+# Directory that the script uses to store temporary files. If you need to run multiple instances of the script, this must be different for every instance.
+# This directory is cleaned out every time the script starts (or created if it does not exist), and removed after the script sucessfully completes.
+export temporary_directory="/tmp/nightcore.sh"
 
 # Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images.
 export waifu2x_denoise_amount=2
@@ -25,7 +26,6 @@ sxloglevelstr="-V1"
 w2loglevelstr="-v 0"
 afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.wav" "input.wave" "input.caf" "input.mka" "input.opus" "input.ogg" "input.oga" "input.vorbis" "input.spx" "input.m4a" "input.m4b" "input.m4r" "input.mp3" "input.bit" )
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
-tmpdir="/tmp/nightcore.sh"
 set -euo pipefail
 
 if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v magick` && `command -v waifu2x-converter-cpp`) ]]; then
@@ -40,9 +40,7 @@ fi
 audio_speed=$(cat speed.txt)
 
 # Initalize temporary directory.
-if [ "$seperate_instances" = true ]; then
-	tmpdir="$tmpdir/$(date +%s)_$RANDOM"
-fi
+tmpdir="$temporary_directory"
 rm -rf $tmpdir
 mkdir -p $tmpdir
 
