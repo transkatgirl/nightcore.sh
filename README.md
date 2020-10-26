@@ -16,6 +16,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - ImageMagick (for encoding the image)
 - SoX (for encoding the audio)
 - Waifu2xcpp (for better image upscaling)
+- MKVToolNix (for embedding thumbnail into video)
 
 ## Usage
 Once dependencies are installed, download the script to your computer. Then, open the script, and adjust the built-in options as you see fit (there are options both at the beginning and the end of the script).

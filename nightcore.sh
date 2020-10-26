@@ -120,6 +120,7 @@ function process_image {
 	magick $image_stage2 -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage $image_output
 
 	touch $image_end
+
 	rm $image_stage2
 	magick $image_output -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 $image_stage3
 
@@ -231,6 +232,7 @@ echo "Rendering video..."
 ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 rm $audio_output
 rm $image_output
+mkvpropedit -q output.mkv --attachment-name cover_land.png --attachment-mime-type "image/png" --add-attachment $image_output_thumbnail
 
 # Clean up temporary directory
 rm -rf $tmpdir
