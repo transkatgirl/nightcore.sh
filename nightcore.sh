@@ -74,11 +74,11 @@ function process_audio {
 	title=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")
 	
 	if [ ! -z "$artist" ] && [ ! -z "$title" ]; then
-		echo "$artist - $title" > $audio_title
+		echo "$artist - $title" | sed 's/([^)]*)//g;s/  / /g' > $audio_title
 	elif [ ! -z "$artist" ]; then
-		echo "$artist" > $audio_title
+		echo "$artist" | sed 's/([^)]*)//g;s/  / /g' > $audio_title
 	elif [ ! -z "$title" ]; then
-		echo "$title" > $audio_title
+		echo "$title" | sed 's/([^)]*)//g;s/  / /g' > $audio_title
 	fi
 	
 	touch $audio_end
@@ -91,6 +91,8 @@ image_begin="$tmpdir/begin_image"
 image_end="$tmpdir/finish_image"
 image_stage1="$tmpdir/stage1.ppm"
 image_stage2="$tmpdir/stage2.ppm"
+image_stage3="$tmpdir/stage3.ppm"
+image_stage4="$tmpdir/stage4.ppm"
 image_output="$tmpdir/output.ppm"
 image_output_thumbnail="output.thumbnail.png"
 function process_image {
@@ -119,7 +121,30 @@ function process_image {
 
 	touch $image_end
 	rm $image_stage2
-	magick $image_output -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 -quality 100 $image_output_thumbnail
+	magick $image_output -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 $image_stage3
+
+	while [[ ! -f "$audio_output" ]]; do
+		sleep 0.1
+	done
+	if [ -f "$audio_title" ]; then
+		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title)':x=75:y=75:alpha=0.75,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=0.75"
+		if [ -d .git ]; then
+			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
+			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=32:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.75"
+		fi
+		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
+	else
+		if [ -d .git ]; then
+			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
+			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=32:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.75"
+			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
+		else
+			cp $image_stage3 $image_stage4
+		fi
+	fi
+	rm $image_stage3
+	convert $image_stage4 -quality 100 $image_output_thumbnail
+	rm $image_stage4
 }
 
 for i in "${afiletypes[@]}"; do
