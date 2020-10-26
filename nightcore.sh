@@ -54,6 +54,7 @@ audio_begin="$tmpdir/begin_audio"
 audio_end="$tmpdir/finish_audio"
 audio_stage1="$tmpdir/stage1.wav"
 audio_output="$tmpdir/output.wav"
+audio_title="$tmpdir/title.txt"
 function process_audio {
 	touch $audio_begin
 
@@ -68,6 +69,18 @@ function process_audio {
 	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-16:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" $audio_output
 
 	rm $audio_stage1
+	
+	artist=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=ARTIST "$1")
+	title=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")
+	
+	if [ ! -z "$artist" ] && [ ! -z "$title" ]; then
+		echo "$artist - $title" > $audio_title
+	elif [ ! -z "$artist" ]; then
+		echo "$artist" > $audio_title
+	elif [ ! -z "$title" ]; then
+		echo "$title" > $audio_title
+	fi
+	
 	touch $audio_end
 }
 
@@ -165,8 +178,18 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 done
 visualizer_start=$(echo $audio_speed | awk '{ print $1 * 20 }')
 visualizer_end=$(echo $audio_speed | awk '{ print $1 * 12500 }')
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=6:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,200\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
-[1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery[background];
+if [ -f "$audio_title" ]; then
+	rtext="[${audio_speed}x speed] $(cat $audio_title)"
+	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=80:text='$rtext':x=75:y=75:alpha=0.75"
+	if [ -d .git ]; then
+		ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
+		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=230:alpha=0.75"
+	fi
+else
+	atext="null"
+fi
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=26dB*a_weighting(f):bar_g=6:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,200\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+[1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
 # Wait for image processing to complete
