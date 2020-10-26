@@ -185,6 +185,9 @@ if [ -f "$audio_title" ]; then
 		ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
 		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=230:alpha=0.75"
 	fi
+elif [ -d .git ]; then
+	ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
+	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=75:alpha=0.75"
 else
 	atext="null"
 fi
