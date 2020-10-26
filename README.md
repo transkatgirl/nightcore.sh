@@ -29,10 +29,4 @@ Useful speed multipliers range from 1.1 to 1.3, different songs will likely need
 When running the script, please make sure you have at least 6GB of available system RAM.
 
 ## Demos
-Want to see what this script is capable of? Some demo videos are posted below.
-
-Zedd - I want you to know (1.2x speed): https://youtu.be/BD_BKzRkbek
-
-OneRepublic - Counting Stars (1.2x speed): https://youtu.be/at4b3IaDJiY
-
-TheFatRat - The Calling (1.2x speed): https://youtu.be/lauosCSkCkE
+Want to see what this script is capable of? Demo videos can be found on [my YouTube channel](https://www.youtube.com/channel/UCbgvvnk-Tb_ixyj7UDWnXaQ).
