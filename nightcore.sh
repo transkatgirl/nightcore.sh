@@ -74,11 +74,11 @@ function process_audio {
 	title=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")
 	
 	if [ ! -z "$artist" ] && [ ! -z "$title" ]; then
-		echo "$artist - $title" | sed 's/([^)]*)//g;s/  / /g' > $audio_title
+		echo "$artist - $title" > $audio_title
 	elif [ ! -z "$artist" ]; then
-		echo "$artist" | sed 's/([^)]*)//g;s/  / /g' > $audio_title
+		echo "$artist" > $audio_title
 	elif [ ! -z "$title" ]; then
-		echo "$title" | sed 's/([^)]*)//g;s/  / /g' > $audio_title
+		echo "$title" > $audio_title
 	fi
 	
 	touch $audio_end
@@ -127,7 +127,7 @@ function process_image {
 		sleep 0.1
 	done
 	if [ -f "$audio_title" ]; then
-		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title)':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=0.8"
+		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title | sed 's/([^)]*)//g;s/  / /g')':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=0.8"
 		if [ -d .git ]; then
 			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
 			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.8"
