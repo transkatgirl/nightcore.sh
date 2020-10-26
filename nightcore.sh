@@ -74,11 +74,11 @@ function process_audio {
 	title=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")
 	
 	if [ ! -z "$artist" ] && [ ! -z "$title" ]; then
-		echo "$artist - $title" > $audio_title
+		echo "$artist - $title" | tr -d \" > $audio_title
 	elif [ ! -z "$artist" ]; then
-		echo "$artist" > $audio_title
+		echo "$artist" | tr -d \" > $audio_title
 	elif [ ! -z "$title" ]; then
-		echo "$title" > $audio_title
+		echo "$title" | tr -d \" > $audio_title
 	fi
 	
 	touch $audio_end
