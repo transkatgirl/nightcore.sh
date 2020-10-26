@@ -28,7 +28,7 @@ afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
 set -euo pipefail
 
-if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v magick`) ]]; then
+if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v magick` && `command -v waifu2x-converter-cpp`) ]]; then
 	echo "Please install the required dependencies before attempting to run the script."
 	exit
 fi
@@ -108,12 +108,7 @@ function process_image {
 	else
 		w2x_scale=$height_scale
 	fi
-	if [ `command -v waifu2x-converter-cpp` ]; then
-		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
-	else
-		echo "WARN: Waifu2xcpp is not installed! Image quality will likely be significantly worse."
-		cp $image_stage1 $image_stage2
-	fi
+	waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
 
 	rm $image_stage1
 
