@@ -188,7 +188,7 @@ if [ -f "$audio_title" ]; then
 else
 	atext="null"
 fi
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=26dB*a_weighting(f):bar_g=6:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,200\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=6:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,200\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
