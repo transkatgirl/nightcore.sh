@@ -26,6 +26,7 @@ sxloglevelstr="-V1"
 w2loglevelstr="-v 0"
 afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.wav" "input.wave" "input.caf" "input.mka" "input.opus" "input.ogg" "input.oga" "input.vorbis" "input.spx" "input.m4a" "input.m4b" "input.m4r" "input.mp3" "input.bit" )
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
+script_dir="$(dirname "$0")"
 set -euo pipefail
 
 if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v magick` && `command -v waifu2x-converter-cpp`) ]]; then
@@ -129,13 +130,13 @@ function process_image {
 	done
 	if [ -f "$audio_title" ]; then
 		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title | sed 's/([^)]*)//g;s/  / /g')':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=0.8"
-		if [ -d .git ]; then
+		if [ -d "$script_dir/.git" ]; then
 			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
 			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.8"
 		fi
 		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 	else
-		if [ -d .git ]; then
+		if [ -d "$script_dir/.git" ]; then
 			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
 			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.8"
 			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
@@ -207,11 +208,11 @@ visualizer_end=$(echo $audio_speed | awk '{ print $1 * 12500 }')
 if [ -f "$audio_title" ]; then
 	rtext="[${audio_speed}x speed] $(cat $audio_title)"
 	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=80:text='$rtext':x=75:y=75:alpha=0.75"
-	if [ -d .git ]; then
+	if [ -d "$script_dir/.git" ]; then
 		ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
 		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=230:alpha=0.75"
 	fi
-elif [ -d .git ]; then
+elif [ -d "$script_dir/.git" ]; then
 	ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
 	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=75:alpha=0.75"
 else
