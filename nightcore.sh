@@ -56,6 +56,7 @@ audio_end="$tmpdir/finish_audio"
 audio_stage1="$tmpdir/stage1.wav"
 audio_output="$tmpdir/output.wav"
 audio_title="$tmpdir/title.txt"
+audio_title_short="$tmpdir/title_short.txt"
 function process_audio {
 	touch $audio_begin
 
@@ -74,12 +75,22 @@ function process_audio {
 	artist=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=ARTIST "$1")
 	title=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")
 	
-	if [ ! -z "$artist" ] && [ ! -z "$title" ]; then
+	if [ -f "title.txt" ]; then
+		cp title.txt $audio_title
+		if [ -f "title_short.txt" ]; then
+			cp title_short.txt $audio_title_short
+		else
+			cat title.txt | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
+		fi
+	elif [ ! -z "$artist" ] && [ ! -z "$title" ]; then
 		echo "$artist - $title" | tr -d \" > $audio_title
+		echo "$(echo $artist | sed 's/,.*//') - $title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	elif [ ! -z "$artist" ]; then
 		echo "$artist" | tr -d \" > $audio_title
+		echo "$artist" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	elif [ ! -z "$title" ]; then
 		echo "$title" | tr -d \" > $audio_title
+		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	fi
 	
 	touch $audio_end
@@ -128,8 +139,8 @@ function process_image {
 	while [[ ! -f "$audio_output" ]]; do
 		sleep 0.1
 	done
-	if [ -f "$audio_title" ]; then
-		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title | sed 's/([^)]*)//g;s/  / /g')':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=0.8"
+	if [ -f "$audio_title_short" ]; then
+		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=0.8"
 		if [ -d "$script_dir/.git" ]; then
 			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
 			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.8"
@@ -195,6 +206,10 @@ filterx="0"
 filtery="0"
 for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	while [ $(echo $(($newx-$x)) | tr -d -) -lt 30 ] && [ $(echo $(($newy-$y)) | tr -d -) -lt 30 ]; do
+		newx=$((($RANDOM % (120-$x))))
+		newy=$((($RANDOM % (120-$y))))
+	done
+	while [ $(echo $(($newx-$x)) | tr -d -) -gt 90 ] || [ $(echo $(($newy-$y)) | tr -d -) -gt 90 ]; do
 		newx=$((($RANDOM % (120-$x))))
 		newy=$((($RANDOM % (120-$y))))
 	done
