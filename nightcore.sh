@@ -9,11 +9,22 @@
 # This directory is cleaned out every time the script starts (or created if it does not exist), and removed after the script sucessfully completes.
 export temporary_directory="/tmp/nightcore.sh"
 
+# Replace transparent pixels in images with the below color.
+export image_transparency_color="#ffffff"
+
 # Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images.
 export waifu2x_denoise_amount=2
 
+# Change the opacity of overlays. The first option affects the video text, the second option affects the audio visualizer, and the third option affects the thumbnail text.
+export video_overlay_alpha=0.72
+export visualizer_overlay_alpha=0.78
+export thumbnail_overlay_alpha=0.8
+
 # Change the number of bars shown on the visualizer.
 export visualizer_bars=100
+
+# Change the maximum frequency shown on the visualizer in (will be adjusted slightly based on speed multiplier). Supported range is 300Hz - 20000Hz.
+export visualizer_max_freq=12500
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
@@ -60,18 +71,6 @@ audio_title_short="$tmpdir/title_short.txt"
 function process_audio {
 	touch $audio_begin
 
-	ffmpeg $ffloglevelstr -i "$1" -vn -map_metadata -1 -af "volume=-15dB,adeclip=m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-95dB:start_mode=all:stop_periods=-1:stop_threshold=-95dB" $audio_stage1
-
-	loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-14:lra=20" -f null - 2>&1)
-	loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated:" | awk '{ print $3+0 }')
-	loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak:" | awk '{ print $4+0 }')
-	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA:" | awk '{ print $3+0 }')
-	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold:" | awk '{ print $3+0 }')
-	loudnorm_offset=$(echo "$loudnorm" | grep "Target Offset:" | awk '{ print $3+0 }')
-	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" $audio_output
-
-	rm $audio_stage1
-	
 	artist=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=ARTIST "$1")
 	title=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")
 	
@@ -92,7 +91,18 @@ function process_audio {
 		echo "$title" | tr -d \" > $audio_title
 		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	fi
-	
+
+	ffmpeg $ffloglevelstr -i "$1" -vn -map_metadata -1 -af "volume=-15dB,adeclip=a=25:n=500:m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-95dB:start_mode=all:stop_periods=-1:stop_threshold=-95dB" $audio_stage1
+
+	loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-14:lra=20" -f null - 2>&1)
+	loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated:" | awk '{ print $3+0 }')
+	loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak:" | awk '{ print $4+0 }')
+	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA:" | awk '{ print $3+0 }')
+	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold:" | awk '{ print $3+0 }')
+	loudnorm_offset=$(echo "$loudnorm" | grep "Target Offset:" | awk '{ print $3+0 }')
+	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" $audio_output
+
+	rm $audio_stage1
 	touch $audio_end
 }
 
@@ -109,7 +119,7 @@ image_output="$tmpdir/output.ppm"
 image_output_thumbnail="output.thumbnail.png"
 function process_image {
 	touch $image_begin
-	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim $image_stage1
+	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -f image2pipe - | magick - -background "$image_transparency_color" -alpha remove -alpha off -fuzz 1% -trim $image_stage1
 
 	width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
 	width_scale=$(echo "$width" | awk '{ print int((4000/$1)+1) }')
@@ -140,16 +150,16 @@ function process_image {
 		sleep 0.1
 	done
 	if [ -f "$audio_title_short" ]; then
-		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=0.8"
+		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=$thumbnail_overlay_alpha"
 		if [ -d "$script_dir/.git" ]; then
 			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
-			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.8"
+			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
 		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 	else
 		if [ -d "$script_dir/.git" ]; then
 			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
-			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=0.8"
+			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
 			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 		else
 			cp $image_stage3 $image_stage4
@@ -219,21 +229,21 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	y=$newy
 done
 visualizer_start=$(echo $audio_speed | awk '{ print $1 * 20 }')
-visualizer_end=$(echo $audio_speed | awk '{ print $1 * 12500 }')
+visualizer_end=$(echo $audio_speed | awk '{ print $1 * '$visualizer_max_freq' }')
 if [ -f "$audio_title" ]; then
 	rtext="[${audio_speed}x speed] $(cat $audio_title)"
-	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=80:text='$rtext':x=75:y=75:alpha=0.75"
+	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=80:text='$rtext':x=75:y=75:alpha=$video_overlay_alpha"
 	if [ -d "$script_dir/.git" ]; then
 		ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
-		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=230:alpha=0.75"
+		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=230:alpha=$video_overlay_alpha"
 	fi
 elif [ -d "$script_dir/.git" ]; then
 	ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
-	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=75:alpha=0.75"
+	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=75:alpha=$video_overlay_alpha"
 else
 	atext="null"
 fi
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=6:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,200\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=6:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
