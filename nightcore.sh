@@ -109,7 +109,7 @@ image_output="$tmpdir/output.ppm"
 image_output_thumbnail="output.thumbnail.png"
 function process_image {
 	touch $image_begin
-	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec ppm -f image2pipe - | magick - -fuzz 1% -trim $image_stage1
+	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim $image_stage1
 
 	width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
 	width_scale=$(echo "$width" | awk '{ print int((4000/$1)+1) }')
