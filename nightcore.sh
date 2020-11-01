@@ -45,7 +45,7 @@ if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `comman
 	exit
 fi
 
-if [[ ! -f "speed.txt" ]]; then
+if [[ ! -s "speed.txt" ]]; then
 	echo "Please create a speed.txt file stating the speed multiplier you want to use (like 1.1 or 1.2)."
 	exit
 fi
@@ -58,7 +58,22 @@ mkdir -p $tmpdir
 
 echo "Processing input files..."
 
-# Remove metadata, fix clipping, speed up audio, and normalize volume.
+# Generate info text
+info_text="$tmpdir/info.txt"
+info_text_short="$tmpdir/info_short.txt"
+if [ -f "info.txt" ]; then
+	cp info.txt $info_text
+	if [ -f "info_short.txt" ]; then
+		cp info_short.txt $info_text_short
+	else
+		cp info.txt $info_text_short
+	fi
+elif [ -d "$script_dir/.git" ]; then
+	echo "nightcore.sh commit $(git rev-parse --short HEAD)" > $info_text
+	cp $info_text $info_text_short
+fi
+
+# Remove metadata, fix clipping, speed up audio, normalize volume, and generate title text.
 # Note: Fixing of clipped samples is done before all other effects, so that all clipped samples are detected properly.
 # Fade-in must be done before silence removal, and after speed adjustment, to prevent timing issues.
 # Loudness normalization must be done last, and cannot be combined with other encoding passes.
@@ -106,7 +121,7 @@ function process_audio {
 	touch $audio_end
 }
 
-# Remove metadata, trim image, AI upscale image, and crop image to 4000x2320.
+# Remove metadata, trim image, AI upscale image, crop image to 4000x2320, and generate thumbnail.
 # Note: Image trimming must be done before upscaling, to ensure final image is >=4000x2320.
 # Image cropping must be done after upscaling, to ensure input image >=4000x2320.
 image_begin="$tmpdir/begin_image"
@@ -149,17 +164,15 @@ function process_image {
 	while [[ ! -f "$audio_output" ]]; do
 		sleep 0.1
 	done
-	if [ -f "$audio_title_short" ]; then
+	if [ -s "$audio_title_short" ]; then
 		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=$thumbnail_overlay_alpha"
-		if [ -d "$script_dir/.git" ]; then
-			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
-			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
+		if [ -s "$info_text_short" ]; then
+			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$(cat $info_text_short)':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
 		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 	else
-		if [ -d "$script_dir/.git" ]; then
-			ctext="nightcore.sh commit $(git rev-parse --short HEAD)"
-			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$ctext':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
+		if [ -s "$info_text_short" ]; then
+			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$(cat $info_text_short)':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
 			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 		else
 			cp $image_stage3 $image_stage4
@@ -230,16 +243,14 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 done
 visualizer_start=$(echo $audio_speed | awk '{ print $1 * 20 }')
 visualizer_end=$(echo $audio_speed | awk '{ print $1 * '$visualizer_max_freq' }')
-if [ -f "$audio_title" ]; then
+if [ -s "$audio_title" ]; then
 	rtext="[${audio_speed}x speed] $(cat $audio_title)"
 	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=80:text='$rtext':x=75:y=75:alpha=$video_overlay_alpha"
-	if [ -d "$script_dir/.git" ]; then
-		ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
-		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=230:alpha=$video_overlay_alpha"
+	if [ -s "$info_text" ]; then
+		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=56:text='$(cat $info_text)':x=75:y=230:alpha=$video_overlay_alpha"
 	fi
-elif [ -d "$script_dir/.git" ]; then
-	ntext="nightcore.sh commit $(git rev-parse --short HEAD)"
-	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$ntext':x=75:y=75:alpha=$video_overlay_alpha"
+elif [ -s "$info_text" ]; then
+	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=56:text='$(cat $info_text)':x=75:y=75:alpha=$video_overlay_alpha"
 else
 	atext="null"
 fi
