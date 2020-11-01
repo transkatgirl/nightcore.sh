@@ -9,10 +9,7 @@
 # This directory is cleaned out every time the script starts (or created if it does not exist), and removed after the script sucessfully completes.
 export temporary_directory="/tmp/nightcore.sh"
 
-# Replace transparent pixels in images with the below color.
-export image_transparency_color="#ffffff"
-
-# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images.
+# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images. 2 is a good middle-ground for anime images, where noise is significantly reduced without noticeable detail loss. If the background is not anime-style or is already high quality, try lowering this value.
 export waifu2x_denoise_amount=2
 
 # Change the opacity of overlays. The first option affects the video text, the second option affects the audio visualizer, and the third option affects the thumbnail text.
@@ -23,7 +20,7 @@ export thumbnail_overlay_alpha=0.8
 # Change the number of bars shown on the visualizer.
 export visualizer_bars=100
 
-# Change the maximum frequency shown on the visualizer in (will be adjusted slightly based on speed multiplier). Supported range is 300Hz - 20000Hz.
+# Change the maximum frequency shown on the visualizer in (will be adjusted slightly based on speed multiplier). Supported range is 120Hz - 20000Hz.
 export visualizer_max_freq=12500
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
@@ -134,7 +131,7 @@ image_output="$tmpdir/output.ppm"
 image_output_thumbnail="output.thumbnail.png"
 function process_image {
 	touch $image_begin
-	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -f image2pipe - | magick - -background "$image_transparency_color" -alpha remove -alpha off -fuzz 1% -trim $image_stage1
+	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim $image_stage1
 
 	width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
 	width_scale=$(echo "$width" | awk '{ print int((4000/$1)+1) }')
@@ -165,7 +162,10 @@ function process_image {
 		sleep 0.1
 	done
 	if [ -s "$audio_title_short" ]; then
-		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=$thumbnail_overlay_alpha"
+		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8"
+		if [ ! $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
+			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=50:text='[${audio_speed}x speed]':x=75:y=200:alpha=$thumbnail_overlay_alpha"
+		fi
 		if [ -s "$info_text_short" ]; then
 			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=35:text='$(cat $info_text_short)':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
@@ -244,7 +244,11 @@ done
 visualizer_start=$(echo $audio_speed | awk '{ print $1 * 20 }')
 visualizer_end=$(echo $audio_speed | awk '{ print $1 * '$visualizer_max_freq' }')
 if [ -s "$audio_title" ]; then
-	rtext="[${audio_speed}x speed] $(cat $audio_title)"
+	if [ $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
+		rtext="$(cat $audio_title)"
+	else
+		rtext="[${audio_speed}x speed] $(cat $audio_title)"
+	fi
 	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=80:text='$rtext':x=75:y=75:alpha=$video_overlay_alpha"
 	if [ -s "$info_text" ]; then
 		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=sans-serif:fontsize=56:text='$(cat $info_text)':x=75:y=230:alpha=$video_overlay_alpha"
