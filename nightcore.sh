@@ -15,10 +15,11 @@ export waifu2x_denoise_amount=2
 # Change the font family used to draw text.
 export font_family="sans-serif"
 
-# Change the font size multiplier. The first option affects all text, the second option affects all thumbnail text, and the third affects all info text.
-export font_size_multiplier=1
-export thumbnail_size_multiplier=1.87
-export info_size_multiplier=0.7
+# Change the font size multipliers. The first option affects video text, the second option affects video info text, the third affects thumbnail text, and the forth affects thumbnail info text.
+export video_font_multiplier=1
+export video_info_multiplier=0.62
+export thumbnail_font_multiplier=1.87
+export thumbnail_info_multiplier=0.7
 
 # Change the opacity of overlays. The first option affects the video text, the second option affects the audio visualizer, and the third option affects the thumbnail text.
 export video_overlay_alpha=0.72
@@ -169,8 +170,8 @@ function process_image {
 	while [[ ! -f "$audio_output" ]]; do
 		sleep 0.1
 	done
-	font_size=$(echo $font_size_multiplier $thumbnail_size_multiplier | awk '{print int(($1 * $2 * (80/3))+0.5) }')
-	info_font_size=$(echo $font_size_multiplier $thumbnail_size_multiplier $info_size_multiplier | awk '{print int(($1 * $2 * $3 * (80/3))+0.5) }')
+	font_size=$(echo $thumbnail_font_multiplier | awk '{print int(($1 * (80/3))+0.5) }')
+	info_font_size=$(echo $thumbnail_font_multiplier $thumbnail_info_multiplier | awk '{print int(($1 * $2 * (80/3))+0.5) }')
 	if [ -s "$audio_title_short" ]; then
 		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$font_size:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8"
 		if [ ! $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
@@ -253,8 +254,8 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 done
 visualizer_start=$(echo $audio_speed | awk '{ print $1 * 20 }')
 visualizer_end=$(echo $audio_speed | awk '{ print $1 * '$visualizer_max_freq' }')
-font_size=$(echo $font_size_multiplier | awk '{print int(($1 * 80)+0.5) }')
-info_font_size=$(echo $font_size_multiplier $info_size_multiplier | awk '{print int(($1 * $2 * 80)+0.5) }')
+font_size=$(echo $video_font_multiplier | awk '{print int(($1 * 80)+0.5) }')
+info_font_size=$(echo $video_font_multiplier $video_info_multiplier | awk '{print int(($1 * $2 * 80)+0.5) }')
 if [ -s "$audio_title" ]; then
 	if [ $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
 		rtext="$(cat $audio_title)"
