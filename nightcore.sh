@@ -17,7 +17,7 @@ export fontconfig='family=sans-serif\:weight=50\:antialias=true\:hinting=false\:
 
 # Change the font size multipliers. The first option affects video text, the second option affects video info text, the third affects thumbnail text, and the forth affects thumbnail info text.
 export video_font_multiplier=1.25
-export video_info_multiplier=0.62
+export video_info_multiplier=0.65
 export thumbnail_font_multiplier=1.87
 export thumbnail_info_multiplier=0.7
 
