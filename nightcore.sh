@@ -12,17 +12,17 @@ export temporary_directory="/tmp/nightcore.sh"
 # Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images. 2 is a good middle-ground for anime images, where noise is significantly reduced without noticeable detail loss. If the background is not anime-style or is already high quality, try lowering this value.
 export waifu2x_denoise_amount=2
 
-# Change the font family used to draw text.
-export font_family="sans-serif"
+# Change the fontconfig settings used to draw text. Colons must be escaped.
+export fontconfig='family=sans-serif\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true'
 
 # Change the font size multipliers. The first option affects video text, the second option affects video info text, the third affects thumbnail text, and the forth affects thumbnail info text.
-export video_font_multiplier=1
+export video_font_multiplier=1.25
 export video_info_multiplier=0.62
 export thumbnail_font_multiplier=1.87
 export thumbnail_info_multiplier=0.7
 
 # Change the opacity of overlays. The first option affects the video text, the second option affects the audio visualizer, and the third option affects the thumbnail text.
-export video_overlay_alpha=0.72
+export video_overlay_alpha=0.74
 export visualizer_overlay_alpha=0.78
 export thumbnail_overlay_alpha=0.8
 
@@ -173,17 +173,17 @@ function process_image {
 	font_size=$(echo $thumbnail_font_multiplier | awk '{print int(($1 * (80/3))+0.5) }')
 	info_font_size=$(echo $thumbnail_font_multiplier $thumbnail_info_multiplier | awk '{print int(($1 * $2 * (80/3))+0.5) }')
 	if [ -s "$audio_title_short" ]; then
-		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$font_size:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8"
+		ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat $audio_title_short)':x=75:y=75:alpha=0.8"
 		if [ ! $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
-			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$font_size:text='[${audio_speed}x speed]':x=75:y=200:alpha=$thumbnail_overlay_alpha"
+			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$font_size:text='[${audio_speed}x speed]':x=75:y=$((150+$font_size)):alpha=$thumbnail_overlay_alpha"
 		fi
 		if [ -s "$info_text_short" ]; then
-			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$info_font_size:text='$(cat $info_text_short)':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
+			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
 		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 	else
 		if [ -s "$info_text_short" ]; then
-			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$info_font_size:text='$(cat $info_text_short)':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
+			ttext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=1205-text_w:y=645-text_h:alpha=$thumbnail_overlay_alpha"
 			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 		else
 			cp $image_stage3 $image_stage4
@@ -262,12 +262,12 @@ if [ -s "$audio_title" ]; then
 	else
 		rtext="[${audio_speed}x speed] $(cat $audio_title)"
 	fi
-	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$font_size:text='$rtext':x=75:y=75:alpha=$video_overlay_alpha"
+	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$font_size:text='$rtext':x=75:y=75:alpha=$video_overlay_alpha"
 	if [ -s "$info_text" ]; then
-		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$info_font_size:text='$(cat $info_text)':x=75:y=230:alpha=$video_overlay_alpha"
+		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=75:y=$((150+$font_size)):alpha=$video_overlay_alpha"
 	fi
 elif [ -s "$info_text" ]; then
-	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:font=$font_family:fontsize=$info_font_size:text='$(cat $info_text)':x=75:y=75:alpha=$video_overlay_alpha"
+	atext="drawtext=box=1:boxcolor=black:boxborderw=25:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=75:y=75:alpha=$video_overlay_alpha"
 else
 	atext="null"
 fi
