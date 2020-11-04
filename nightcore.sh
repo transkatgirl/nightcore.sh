@@ -9,8 +9,8 @@
 # This directory is cleaned out every time the script starts (or created if it does not exist), and removed after the script sucessfully completes.
 export temporary_directory="/tmp/nightcore.sh"
 
-# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images. 2 is a good middle-ground for anime images, where noise is significantly reduced without noticeable detail loss. If the background is not anime-style or is already high quality, try lowering this value.
-export waifu2x_denoise_amount=2
+# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images. Avoid going over "2", as noise reduction can result in a noticeable loss in detail. Try reducing this value if the input image is already high quality.
+export waifu2x_denoise_amount=1
 
 # Change the fontconfig settings used to draw text. Colons must be escaped.
 export fontconfig='family=sans-serif\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true'
