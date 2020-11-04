@@ -30,14 +30,14 @@ export video_overlay_alpha=0.74
 export visualizer_overlay_alpha=0.78
 export thumbnail_overlay_alpha=0.8
 
-# Change the number of bars shown on the visualizer.
-export visualizer_bars=80
+# Change the number of bars shown on the visualizer. If you want a smooth graph instead of a bargraph, set this to 3840.
+export visualizer_bars=90
 
 # Change the maximum frequency shown on the visualizer in (will be adjusted slightly based on speed multiplier). Supported range is 120Hz - 20000Hz.
 export visualizer_max_freq=12500
 
 # Change the sensitivity of the visualizer. Supported range is 1 - 0.0001
-export visualizer_sens=0.07
+export visualizer_sens=0.3
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
