@@ -16,13 +16,13 @@ export waifu2x_denoise_amount=2
 export fontconfig='family=sans-serif\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true'
 
 # Change the font size multipliers. The first option affects video text, the second option affects video info text, the third affects thumbnail text, and the forth affects thumbnail info text.
-export video_font_multiplier=1.25
+export video_font_multiplier=1.1
 export video_info_multiplier=0.65
 export thumbnail_font_multiplier=1.87
 export thumbnail_info_multiplier=0.7
 
 # Change the font padding multipliers. The first option affects video text, the second affects thumbnail text.
-export video_padding_multiplier=1.25
+export video_padding_multiplier=1.1
 export thumbnail_padding_multiplier=3
 
 # Change the opacity of overlays. The first option affects the video text, the second option affects the audio visualizer, and the third option affects the thumbnail text.
