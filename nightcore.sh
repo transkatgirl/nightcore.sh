@@ -31,10 +31,13 @@ export visualizer_overlay_alpha=0.78
 export thumbnail_overlay_alpha=0.8
 
 # Change the number of bars shown on the visualizer.
-export visualizer_bars=100
+export visualizer_bars=80
 
 # Change the maximum frequency shown on the visualizer in (will be adjusted slightly based on speed multiplier). Supported range is 120Hz - 20000Hz.
 export visualizer_max_freq=12500
+
+# Change the sensitivity of the visualizer. Supported range is 1 - 0.0001
+export visualizer_sens=0.07
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
@@ -147,15 +150,19 @@ function process_image {
 	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim $image_stage1
 
 	width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
-	width_scale=$(echo "$width" | awk '{ print int((4000/$1)+1) }')
+	width_scale=$(echo "$width" | awk '{ print int((4000/$1)+0.99999) }')
 	height=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height $image_stage1)
-	height_scale=$(echo "$height" | awk '{ print int((2320/$1)+1) }')
+	height_scale=$(echo "$height" | awk '{ print int((2320/$1)+0.99999) }')
 	if [ "$width_scale" -ge "$height_scale" ]; then
 		w2x_scale=$width_scale
 	else
 		w2x_scale=$height_scale
 	fi
-	waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
+	if [ "$w2x_scale" -gt 1 ]; then
+		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
+	else
+		waifu2x-converter-cpp $w2loglevelstr -m noise --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
+	fi
 
 	rm $image_stage1
 
@@ -277,7 +284,7 @@ elif [ -s "$info_text" ]; then
 else
 	atext="null"
 fi
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=26dB*a_weighting(f):bar_g=6:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=0.0001|0.0001|0.0001|0.0001|0.0001|0.0001,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=20dB*a_weighting(f):sono_g=1:bar_g=6:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
