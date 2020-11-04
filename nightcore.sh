@@ -289,7 +289,7 @@ rm "$image_end"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
-ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params lossless=1 -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 rm $audio_output
 rm $image_output
 if [ `command -v mkvpropedit` ]; then
