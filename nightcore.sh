@@ -37,7 +37,7 @@ export visualizer_bars=150
 export visualizer_max_freq=12500
 
 # Change the sensitivity of the visualizer. Supported range is 1 - 0.001
-export visualizer_sens=0.4
+export visualizer_sens=0.3
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
