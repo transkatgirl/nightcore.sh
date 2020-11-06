@@ -43,7 +43,7 @@ export visualizer_max_freq=12500
 # Change the sensitivity of the visualizer. Supported range is 1 - 0.001
 export visualizer_sens=0.3
 
-# Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, and veryslow. Slower presets will result in more efficient compression.
+# Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
 
 ##### Start of code
@@ -73,7 +73,7 @@ tmpdir="$temporary_directory"
 rm -rf $tmpdir
 mkdir -p $tmpdir
 
-echo "Processing input files..."
+echo "Note: Image and audio processing is multi-threaded, so the last console log message may not be the active processing step."
 
 # Generate info text
 info_text="$tmpdir/info.txt"
@@ -98,6 +98,7 @@ audio_begin="$tmpdir/begin_audio"
 audio_end="$tmpdir/finish_audio"
 audio_stage1="$tmpdir/stage1.wav"
 audio_output="$tmpdir/output.wav"
+audio_output_alt="$tmpdir/output.flac"
 audio_title="$tmpdir/title.txt"
 audio_title_short="$tmpdir/title_short.txt"
 function process_audio {
@@ -124,17 +125,23 @@ function process_audio {
 		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	fi
 
-	ffmpeg $ffloglevelstr -i "$1" -vn -map_metadata -1 -af "volume=-15dB,adeclip=a=25:n=500:m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-95dB:start_mode=all:stop_periods=-1:stop_threshold=-95dB" $audio_stage1
+	echo "Processing audio..."
+	ffmpeg $ffloglevelstr -i "$1" -vn -af "volume=-15dB,adeclip=a=25:n=500:m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-90dB:start_mode=all:stop_periods=-1:stop_threshold=-90dB" $audio_stage1
 
+	echo "Normalizing audio loudness..."
 	loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-14:lra=20" -f null - 2>&1)
 	loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated:" | awk '{ print $3+0 }')
 	loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak:" | awk '{ print $4+0 }')
 	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA:" | awk '{ print $3+0 }')
 	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold:" | awk '{ print $3+0 }')
 	loudnorm_offset=$(echo "$loudnorm" | grep "Target Offset:" | awk '{ print $3+0 }')
-	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" $audio_output
+	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" -map_metadata -1 $audio_output
 
 	rm $audio_stage1
+	if [ `command -v flac` ]; then
+		echo "Compressing audio..."
+		flac --totally-silent --replay-gain --best -e -l 12 -p -r 0,8 -o "$audio_output_alt" "$audio_output"
+	fi
 	touch $audio_end
 }
 
@@ -143,6 +150,7 @@ function process_audio {
 # Image cropping must be done after upscaling, to ensure input image >=4000x2320.
 image_begin="$tmpdir/begin_image"
 image_end="$tmpdir/finish_image"
+image_thumbnail_end="$tmpdir/finish_image_thumbnail"
 image_stage1="$tmpdir/stage1.ppm"
 image_stage2="$tmpdir/stage2.ppm"
 image_stage3="$tmpdir/stage3.ppm"
@@ -151,6 +159,7 @@ image_output="$tmpdir/output.ppm"
 image_output_thumbnail="output.thumbnail.png"
 function process_image {
 	touch $image_begin
+	echo "Processing image..."
 	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim $image_stage1
 
 	width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
@@ -163,13 +172,16 @@ function process_image {
 		w2x_scale=$height_scale
 	fi
 	if [ "$w2x_scale" -gt 1 ]; then
+		echo "Upscaling and denoising image..."
 		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
 	else
+		echo "Denoising image..."
 		waifu2x-converter-cpp $w2loglevelstr -m noise --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
 	fi
 
 	rm $image_stage1
 
+	echo "Cropping image..."
 	if [ $(echo $width $height | awk '{ print int(($1/$2)*100) }') -gt 130 ]; then
 		gravity="Center"
 	else
@@ -177,6 +189,7 @@ function process_image {
 	fi
 	magick $image_stage2 -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage $image_output
 
+	echo "Generating thumbnail..."
 	touch $image_end
 
 	rm $image_stage2
@@ -207,7 +220,16 @@ function process_image {
 	fi
 	rm $image_stage3
 	convert $image_stage4 -quality 100 $image_output_thumbnail
+	if [ `command -v pngcrush` ]; then
+		if [ `command -v flac` ]; then
+			# We know that compressing the audio is going to take far longer (and it blocks the encoding of the video), so we can get away with printing this message without worrying about it messing with the video encoder's progress indicator.
+			echo "Compressing thumbnail..."
+		fi
+		pngcrush -s -brute -ow $image_output_thumbnail
+	fi
 	rm $image_stage4
+
+	touch $image_thumbnail_end
 }
 
 for i in "${afiletypes[@]}"; do
@@ -300,9 +322,18 @@ rm "$image_end"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
-ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+if [ -f "$audio_output_alt" ]; then
+	ffmpeg $ffloglevelstr -stats -i $audio_output_alt -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -preset "$x265_encoder_preset" -c:a copy output.mkv
+	rm "$audio_output_alt"
+else
+	ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+fi
 rm $audio_output
 rm $image_output
+while [[ ! -f "$image_thumbnail_end" ]]; do
+	sleep 0.1
+done
+rm "$image_thumbnail_end"
 if [ `command -v mkvpropedit` ]; then
 	mkvpropedit -q output.mkv --attachment-name cover_land.png --attachment-mime-type "image/png" --add-attachment $image_output_thumbnail
 fi
