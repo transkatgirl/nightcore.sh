@@ -12,6 +12,10 @@ export temporary_directory="/tmp/nightcore.sh"
 # Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images. Avoid going over "2", as noise reduction can result in a noticeable loss in detail. Try reducing this value if the input image is already high quality.
 export waifu2x_denoise_amount=1
 
+# Change the colors used for text. The first option affects the text itself, the second option affects the overlay box.
+export text_color="#ffffff"
+export text_overlay_color="#000000"
+
 # Change the fontconfig settings used to draw text. Colons must be escaped.
 export fontconfig='family=sans-serif\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true'
 
@@ -41,7 +45,7 @@ export visualizer_blur_power=4
 export visualizer_max_freq=12500
 
 # Change the sensitivity of the visualizer. Supported range is 1 - 0.001
-export visualizer_sens=0.3
+export visualizer_sens=0.4
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
@@ -138,7 +142,8 @@ function process_audio {
 	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" -map_metadata -1 $audio_output
 
 	rm $audio_stage1
-	if [ `command -v flac` ]; then
+	if [ `command -v flac` ] && [ ! -f "$image_end" ]; then
+		# Only bother futher compressing the audio if there's time to do so.
 		echo "Compressing audio..."
 		flac --totally-silent --replay-gain --best -e -l 12 -p -r 0,8 -o "$audio_output_alt" "$audio_output"
 	fi
@@ -202,17 +207,17 @@ function process_image {
 	info_font_size=$(echo $thumbnail_font_multiplier $thumbnail_info_multiplier | awk '{print int(($1 * $2 * (80/3))+0.5) }')
 	padding=$(echo $thumbnail_padding_multiplier | awk '{print int(($1 * (25/3))+0.5)}')
 	if [ -s "$audio_title_short" ]; then
-		ttext="drawtext=box=1:boxcolor=black:boxborderw=$padding:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat $audio_title_short)':x=$(($padding*3)):y=$(($padding*3)):alpha=0.8"
+		ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat $audio_title_short)':x=$(($padding*3)):y=$(($padding*3)):alpha=0.8"
 		if [ ! $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
-			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=$padding:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$font_size:text='[${audio_speed}x speed]':x=$(($padding*3)):y=$((($padding*6)+$font_size)):alpha=$thumbnail_overlay_alpha"
+			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='[${audio_speed}x speed]':x=$(($padding*3)):y=$((($padding*6)+$font_size)):alpha=$thumbnail_overlay_alpha"
 		fi
 		if [ -s "$info_text_short" ]; then
-			ttext="$ttext,drawtext=box=1:boxcolor=black:boxborderw=$padding:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$((1280-($padding*3)))-text_w:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
+			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$((1280-($padding*3)))-text_w:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
 		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 	else
 		if [ -s "$info_text_short" ]; then
-			ttext="drawtext=box=1:boxcolor=black:boxborderw=$padding:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$((1280-($padding*3)))-text_w:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
+			ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$((1280-($padding*3)))-text_w:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
 			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 		else
 			cp $image_stage3 $image_stage4
@@ -297,12 +302,12 @@ if [ -s "$audio_title" ]; then
 	else
 		rtext="[${audio_speed}x speed] $(cat $audio_title)"
 	fi
-	atext="drawtext=box=1:boxcolor=black:boxborderw=$padding:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$font_size:text='$rtext':x=$(($padding*3)):y=$(($padding*3)):alpha=$video_overlay_alpha"
+	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$rtext':x=$(($padding*3)):y=$(($padding*3)):alpha=$video_overlay_alpha"
 	if [ -s "$info_text" ]; then
-		atext="$atext,drawtext=box=1:boxcolor=black:boxborderw=$padding:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$(($padding*3)):y=$((($padding*6)+$font_size)):alpha=$video_overlay_alpha"
+		atext="$atext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$(($padding*3)):y=$((($padding*6)+$font_size)):alpha=$video_overlay_alpha"
 	fi
 elif [ -s "$info_text" ]; then
-	atext="drawtext=box=1:boxcolor=black:boxborderw=$padding:fontcolor=white:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$(($padding*3)):y=$(($padding*3)):alpha=$video_overlay_alpha"
+	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$(($padding*3)):y=$(($padding*3)):alpha=$video_overlay_alpha"
 else
 	atext="null"
 fi
