@@ -221,10 +221,6 @@ function process_image {
 	rm $image_stage3
 	convert $image_stage4 -quality 100 $image_output_thumbnail
 	if [ `command -v pngcrush` ]; then
-		if [ `command -v flac` ]; then
-			# We know that compressing the audio is going to take far longer (and it blocks the encoding of the video), so we can get away with printing this message without worrying about it messing with the video encoder's progress indicator.
-			echo "Compressing thumbnail..."
-		fi
 		pngcrush -s -brute -ow $image_output_thumbnail
 	fi
 	rm $image_stage4
