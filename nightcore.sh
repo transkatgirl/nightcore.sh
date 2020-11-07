@@ -16,6 +16,9 @@ export waifu2x_denoise_amount=1
 export text_color="#ffffff"
 export text_overlay_color="#000000"
 
+# Change the color used for the audio visualizer.
+export visualizer_overlay_color="#000000"
+
 # Change the fontconfig settings used to draw text. Colons must be escaped.
 export fontconfig='family=sans-serif\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true'
 
@@ -234,7 +237,7 @@ function process_image {
 }
 
 for i in "${afiletypes[@]}"; do
-	if [[ -f "$i" ]]; then
+	if [[ -s "$i" ]]; then
 		process_audio "$i" "$audio_speed" &
 		break
 	fi
@@ -250,7 +253,7 @@ fi
 
 
 for i in "${vfiletypes[@]}"; do
-	if [[ -f "$i" ]]; then
+	if [[ -s "$i" ]]; then
 		process_image $i &
 		break
 	fi
@@ -296,6 +299,9 @@ visualizer_end=$(echo $audio_speed | awk '{ print $1 * '$visualizer_max_freq' }'
 font_size=$(echo $video_font_multiplier | awk '{print int(($1 * 80)+0.5) }')
 info_font_size=$(echo $video_font_multiplier $video_info_multiplier | awk '{print int(($1 * $2 * 80)+0.5) }')
 padding=$(echo $video_padding_multiplier | awk '{print int(($1 * 25)+0.5)}')
+visualizer_r=$((16#${visualizer_overlay_color:1:2}))
+visualizer_g=$((16#${visualizer_overlay_color:3:2}))
+visualizer_b=$((16#${visualizer_overlay_color:5:2}))
 if [ -s "$audio_title" ]; then
 	if [ $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
 		rtext="$(cat $audio_title)"
@@ -311,7 +317,7 @@ elif [ -s "$info_text" ]; then
 else
 	atext="null"
 fi
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=20dB*a_weighting(f):sono_g=1:bar_g=7:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=0:c1=0:c2=0:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=20dB*a_weighting(f):sono_g=1:bar_g=7:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
@@ -323,7 +329,7 @@ rm "$image_end"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
-if [ -f "$audio_output_alt" ]; then
+if [ -s "$audio_output_alt" ]; then
 	ffmpeg $ffloglevelstr -stats -i $audio_output_alt -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -preset "$x265_encoder_preset" -c:a copy output.mkv
 	rm "$audio_output_alt"
 else
