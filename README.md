@@ -22,7 +22,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - FLAC (for further compressing audio)
 
 ## Usage
-Once dependencies are installed, download the script to your computer. Then, open the script, and adjust the built-in options as you see fit (there are options both at the beginning and the end of the script).
+Once dependencies are installed, download the script to your computer. Then, open the script, and adjust the built-in options as you see fit.
 
 Once the script is configured, name your input files `input.(audio format)` and `input.(image format)`, and create a `speed.txt` file with a numeric speed multiplier (like `1.2`). Then run the script like so: `bash nightcore.sh`.
 
@@ -55,6 +55,9 @@ Different input files can be used to affect the functionality of nightcore.sh. A
   - If missing, it will be a copy of info.txt.
   - If empty, additional info will not be displayed in the thumbnail.
   - Should not contain any newlines.
+- options.sh - Nightcore.sh configuration file.
+  - Follow same format as built-in options in script.
+  - Overrides options specified in script.
 
 ## Demos
 Want to see what this script is capable of? Demo videos can be found on [my YouTube channel](https://www.youtube.com/channel/UCbgvvnk-Tb_ixyj7UDWnXaQ).

@@ -55,6 +55,10 @@ export x265_encoder_preset="slow"
 
 ##### Start of code
 
+if [ -s "options.sh" ]; then
+	source ./options.sh
+fi
+
 ffloglevelstr="-loglevel error -y"
 fploglevelstr="-loglevel error -of csv=p=0"
 sxloglevelstr="-V1"
