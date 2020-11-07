@@ -69,12 +69,16 @@ sxloglevelstr="-V1"
 w2loglevelstr="-v 0"
 afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.wav" "input.wave" "input.caf" "input.mka" "input.opus" "input.ogg" "input.oga" "input.vorbis" "input.spx" "input.m4a" "input.m4b" "input.m4r" "input.mp3" "input.bit" )
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
+sfiletypes=( "input.vtt" "input.srt" "input.ssa" "input.ass" "input.lrc" )
 script_dir="$(dirname "$0")"
 set -euo pipefail
 
 if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v magick` && `command -v waifu2x-converter-cpp`) ]]; then
 	echo "Please install the required dependencies before attempting to run the script."
 	exit
+fi
+if [ `command -v npm` ] && [ `command -v node` ] && [ ! -d "$script_dir/subtitles/node_modules" ]; then
+	npm install --prefix $script_dir/subtitles
 fi
 
 if [[ ! -s "speed.txt" ]]; then
@@ -254,6 +258,20 @@ function process_image {
 	touch $image_thumbnail_end
 }
 
+subtitle_stage1="$tmpdir/stage1.ass"
+subtitle_stage2="$tmpdir/stage2.srt"
+subtitle_output="$tmpdir/output.srt"
+function process_subtitles {
+	if [ `command -v node` ] && [ -d "$script_dir/subtitles/node_modules" ]; then
+		echo "Processing subtitles..."
+		ffmpeg $ffloglevelstr -i $1 -map_metadata -1 $subtitle_stage1
+		node $script_dir/subtitles/index.js "$2" "$subtitle_stage1" "$subtitle_stage2"
+		rm $subtitle_stage1
+		ffmpeg $ffloglevelstr -i $subtitle_stage2 $subtitle_output
+		rm $subtitle_stage2
+	fi
+}
+
 for i in "${afiletypes[@]}"; do
 	if [[ -s "$i" ]]; then
 		process_audio "$i" "$audio_speed" &
@@ -272,7 +290,7 @@ fi
 
 for i in "${vfiletypes[@]}"; do
 	if [[ -s "$i" ]]; then
-		process_image $i &
+		process_image "$i" &
 		break
 	fi
 done
@@ -284,6 +302,13 @@ if [[ ! -f "$image_begin" ]]; then
 else
 	rm "$image_begin"
 fi
+
+for i in "${sfiletypes[@]}"; do
+	if [[ -s "$i" ]]; then
+		process_subtitles "$i" "$audio_speed" &
+		break
+	fi
+done
 
 # Wait for audio processing to complete
 while [[ ! -f "$audio_end" ]]; do
