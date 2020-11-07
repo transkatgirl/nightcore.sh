@@ -269,6 +269,7 @@ function process_subtitles {
 		rm $subtitle_stage1
 		ffmpeg $ffloglevelstr -i $subtitle_stage2 $subtitle_output
 		rm $subtitle_stage2
+		cp $subtitle_output output.srt
 	fi
 }
 

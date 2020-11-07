@@ -20,6 +20,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - MKVToolNix (for embedding thumbnail into video)
 - pngcrush (for further compressing thumbnail)
 - FLAC (for further compressing audio)
+- NPM, NodeJS (for parsing and processing subtitles)
 
 ## Usage
 Once dependencies are installed, download the script to your computer. Then, open the script, and adjust the built-in options as you see fit.
@@ -33,12 +34,16 @@ When running the script, please make sure you have at least 6GB of available sys
 ### Special files
 Different input files can be used to affect the functionality of nightcore.sh. A list of all files nightcore.sh can use is below.
 - \[required\] input.(audio format) - Audio that will be processed and used as the video's music.
+  - Metadata will be removed from the audio file during processing.
 - \[required\] input.(image format) - Image that will be processed and used as the video's background.
   - If the file is animated, only the first frame of the animation will be used.
   - If the file is transparent, transparency will be replaced with solid white.
 - \[required\] speed.txt - Speed multiplier to speed up/slow down audio by.
   - Should not contain any whitespace.
   - Must be non-empty and a valid number.
+- input.(subtitle format) - Subtitles that will be processed and used as the video's lyrics.
+  - Subtitles should match the original song's speed, as they will be sped up by the script.
+  - Metadata will be removed from the subtitle file during processing.
 - title.txt - Song info displayed in the video (Artist - Title).
   - If missing, it will be automatically generated from file metadata.
   - If empty, song title will not be displayed in the video.
