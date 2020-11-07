@@ -12,7 +12,7 @@ export temporary_directory="/tmp/nightcore.sh"
 # Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images. Avoid going over "2", as noise reduction can result in a noticeable loss in detail. Try reducing this value if the input image is already high quality.
 export waifu2x_denoise_amount=1
 
-# Change the colors used for text. The first option affects the text itself, the second option affects the overlay box.
+# Change the colors used for text. The first option affects the text itself, the second option affects the overlay box. Set the second option to "#00000000" to disable rendering the overlay box.
 export text_color="#ffffff"
 export text_overlay_color="#000000"
 
@@ -31,6 +31,10 @@ export thumbnail_info_multiplier=0.7
 # Change the font padding multipliers. The first option affects video text, the second affects thumbnail text.
 export video_padding_multiplier=1.1
 export thumbnail_padding_multiplier=3
+
+# Change the font alignment. The first option affects video text, and the second affects thumbnail text. Available options are "left" (default), "center", and "right".
+export video_font_align="left"
+export thumbnail_font_align="left"
 
 # Change the opacity of overlays. The first option affects the video text, the second option affects the audio visualizer, and the third option affects the thumbnail text.
 export video_overlay_alpha=0.74
@@ -213,18 +217,28 @@ function process_image {
 	font_size=$(echo $thumbnail_font_multiplier | awk '{print int(($1 * (80/3))+0.5) }')
 	info_font_size=$(echo $thumbnail_font_multiplier $thumbnail_info_multiplier | awk '{print int(($1 * $2 * (80/3))+0.5) }')
 	padding=$(echo $thumbnail_padding_multiplier | awk '{print int(($1 * (25/3))+0.5)}')
+	if [ "$thumbnail_font_align" == "right" ]; then
+		font_x="$((1280-($padding*3)))-text_w"
+		font_alt_x="$(($padding*3))"
+	elif [ "$thumbnail_font_align" == "center" ]; then
+		font_x="640-(text_w/2)"
+		font_alt_x="640-(text_w/2)"
+	else
+		font_x="$(($padding*3))"
+		font_alt_x="$((1280-($padding*3)))-text_w"
+	fi
 	if [ -s "$audio_title_short" ]; then
-		ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat $audio_title_short)':x=$(($padding*3)):y=$(($padding*3)):alpha=0.8"
+		ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat $audio_title_short)':x=$font_x:y=$(($padding*3)):alpha=0.8"
 		if [ ! $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
-			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='[${audio_speed}x speed]':x=$(($padding*3)):y=$((($padding*6)+$font_size)):alpha=$thumbnail_overlay_alpha"
+			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='[${audio_speed}x speed]':x=$font_x:y=$((($padding*6)+$font_size)):alpha=$thumbnail_overlay_alpha"
 		fi
 		if [ -s "$info_text_short" ]; then
-			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$((1280-($padding*3)))-text_w:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
+			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
 		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 	else
 		if [ -s "$info_text_short" ]; then
-			ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$((1280-($padding*3)))-text_w:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
+			ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
 			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
 		else
 			cp $image_stage3 $image_stage4
@@ -306,18 +320,27 @@ padding=$(echo $video_padding_multiplier | awk '{print int(($1 * 25)+0.5)}')
 visualizer_r=$((16#${visualizer_overlay_color:1:2}))
 visualizer_g=$((16#${visualizer_overlay_color:3:2}))
 visualizer_b=$((16#${visualizer_overlay_color:5:2}))
+if [ "$video_font_align" == "right" ]; then
+	font_x="$((3840-($padding*3)))-text_w"
+elif [ "$video_font_align" == "center" ]; then
+	font_x="1920-(text_w/2)"
+else
+	font_x="$(($padding*3))"
+fi
 if [ -s "$audio_title" ]; then
 	if [ $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
 		rtext="$(cat $audio_title)"
+	elif [ "$video_font_align" == "right" ]; then
+		rtext="$(cat $audio_title) [${audio_speed}x speed]"
 	else
 		rtext="[${audio_speed}x speed] $(cat $audio_title)"
 	fi
-	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$rtext':x=$(($padding*3)):y=$(($padding*3)):alpha=$video_overlay_alpha"
+	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$rtext':x=$font_x:y=$(($padding*3)):alpha=$video_overlay_alpha"
 	if [ -s "$info_text" ]; then
-		atext="$atext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$(($padding*3)):y=$((($padding*6)+$font_size)):alpha=$video_overlay_alpha"
+		atext="$atext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$font_x:y=$((($padding*6)+$font_size)):alpha=$video_overlay_alpha"
 	fi
 elif [ -s "$info_text" ]; then
-	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$(($padding*3)):y=$(($padding*3)):alpha=$video_overlay_alpha"
+	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$font_x:y=$(($padding*3)):alpha=$video_overlay_alpha"
 else
 	atext="null"
 fi
