@@ -37,16 +37,16 @@ export video_font_align="left"
 export thumbnail_font_align="left"
 
 # Change the opacity of overlays. The first option affects the video text, the second option affects the audio visualizer, and the third option affects the thumbnail text.
-export video_overlay_alpha=0.74
-export visualizer_overlay_alpha=0.78
+export video_overlay_alpha=0.76
+export visualizer_overlay_alpha=0.8
 export thumbnail_overlay_alpha=0.8
 
 # Change the number of bars shown on the visualizer. If you want a smooth graph instead of a bargraph, set this to 3840.
-export visualizer_bars=3840
+export visualizer_bars=110
 
 # Change the blur used to smooth the visualizer during processing. If you're rendering a bargraph, set the visualizer_blur_power to 0 to disable blurring.
 export visualizer_blur_radius=8
-export visualizer_blur_power=4
+export visualizer_blur_power=0
 
 # Change the maximum frequency shown on the visualizer in (will be adjusted slightly based on speed multiplier). Supported range is 120Hz - 20000Hz.
 export visualizer_max_freq=12500
