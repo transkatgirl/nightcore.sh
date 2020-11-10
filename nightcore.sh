@@ -135,13 +135,13 @@ function process_audio {
 			cat title.txt | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 		fi
 	elif [ ! -z "$artist" ] && [ ! -z "$title" ]; then
-		echo "$artist - $title" | tr -d \" > $audio_title
+		echo "$artist - $title" | tr -d \" | sed 's/, / \& /g' > $audio_title
 		echo "$(echo $artist | sed 's/,.*//') - $title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	elif [ ! -z "$artist" ]; then
-		echo "$artist" | tr -d \" > $audio_title
-		echo "$artist" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
+		echo "$artist" | tr -d \" | sed 's/, / \& /g' > $audio_title
+		echo "$artist" | tr -d \" | sed 's/, / \& /g' | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	elif [ ! -z "$title" ]; then
-		echo "$title" | tr -d \" > $audio_title
+		echo "$title" | tr -d \" | sed 's/, / \& /g' > $audio_title
 		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	fi
 
