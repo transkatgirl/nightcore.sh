@@ -60,6 +60,7 @@ export x265_encoder_preset="slow"
 ##### Start of code
 
 if [ -s "options.sh" ]; then
+	echo "Loading config..."
 	source ./options.sh
 fi
 
@@ -160,7 +161,7 @@ function process_audio {
 	if [ `command -v flac` ] && [ ! -f "$image_end" ]; then
 		# Only bother futher compressing the audio if there's time to do so.
 		echo "Compressing audio..."
-		flac --totally-silent --replay-gain --best -e -l 12 -p -r 0,8 -o "$audio_output_alt" "$audio_output"
+		flac --totally-silent --best -e -l 12 -p -r 0,8 -o "$audio_output_alt" "$audio_output"
 	fi
 	touch $audio_end
 }
