@@ -142,7 +142,7 @@ function process_audio {
 		echo "$artist" | tr -d \" | sed 's/, / \& /g' | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	elif [ ! -z "$title" ]; then
 		echo "$title" | tr -d \" | sed 's/, / \& /g' > $audio_title
-		echo "$title" | tr -d \" | sed 's/, / \& /g' | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
+		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
 	fi
 
 	echo "Processing audio..."
