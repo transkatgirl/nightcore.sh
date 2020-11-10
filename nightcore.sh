@@ -250,12 +250,13 @@ function process_image {
 		fi
 	fi
 	rm $image_stage3
+
 	convert $image_stage4 -quality 100 $image_output_thumbnail
+	rm $image_stage4
+
 	if [ `command -v pngcrush` ]; then
 		pngcrush -s -brute -ow $image_output_thumbnail
 	fi
-	rm $image_stage4
-
 	touch $image_thumbnail_end
 }
 
