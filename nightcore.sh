@@ -392,10 +392,10 @@ rm "$image_end"
 # Render video with generated filtergraph
 echo "Rendering video..."
 if [ -s "$audio_output_alt" ]; then
-	ffmpeg $ffloglevelstr -stats -i $audio_output_alt -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -preset "$x265_encoder_preset" -c:a copy output.mkv
+	ffmpeg $ffloglevelstr -stats -i $audio_output_alt -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy output.mkv
 	rm "$audio_output_alt"
 else
-	ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
+	ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
 fi
 rm $audio_output
 rm $image_output
