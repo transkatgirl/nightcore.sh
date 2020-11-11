@@ -133,17 +133,17 @@ function process_audio {
 		if [ -f "title_short.txt" ]; then
 			cp title_short.txt $audio_title_short
 		else
-			cat title.txt | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
+			cat title.txt | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
 		fi
 	elif [ ! -z "$artist" ] && [ ! -z "$title" ]; then
 		echo "$artist - $title" | tr -d \" | sed 's/, / \& /g' > $audio_title
-		echo "$(echo $artist | sed 's/,.*//') - $title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
+		echo "$(echo $artist | sed 's/,.*//') - $title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
 	elif [ ! -z "$artist" ]; then
 		echo "$artist" | tr -d \" | sed 's/, / \& /g' > $audio_title
-		echo "$artist" | tr -d \" | sed 's/, / \& /g' | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
+		echo "$artist" | tr -d \" | sed 's/, / \& /g' | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
 	elif [ ! -z "$title" ]; then
 		echo "$title" | tr -d \" | sed 's/, / \& /g' > $audio_title
-		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' > $audio_title_short
+		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
 	fi
 
 	echo "Processing audio..."
