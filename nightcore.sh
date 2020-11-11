@@ -9,9 +9,6 @@
 # This directory is cleaned out every time the script starts (or created if it does not exist), and removed after the script sucessfully completes.
 export temporary_directory="/tmp/nightcore.sh"
 
-# Change the amount that waifu2x denoises the image (0-3). Setting this too high can result in loss of detail, especially in non-anime images. Avoid going over "2", as noise reduction can result in a noticeable loss in detail. Try reducing this value if the input image is already high quality.
-export waifu2x_denoise_amount=1
-
 # Change the colors used for text. The first option affects the text itself, the second option affects the overlay box. Set the second option to "#00000000" to disable rendering the overlay box.
 export text_color="#ffffff"
 export text_overlay_color="#000000"
@@ -192,12 +189,18 @@ function process_image {
 	else
 		w2x_scale=$height_scale
 	fi
+	if [ "$w2x_scale" -lt 2 ]; then
+		w2x_denoise=1
+	elif [ "$w2x_scale" -lt 3 ]; then
+		w2x_denoise=2
+	else
+		w2x_denoise=3
+	fi
 	if [ "$w2x_scale" -gt 1 ]; then
 		echo "Upscaling and denoising image..."
-		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
+		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $w2x_denoise -i $image_stage1 -o $image_stage2
 	else
-		echo "Denoising image..."
-		waifu2x-converter-cpp $w2loglevelstr -m noise --noise-level $waifu2x_denoise_amount -i $image_stage1 -o $image_stage2
+		cp $image_stage1 $image_stage2
 	fi
 
 	rm $image_stage1
