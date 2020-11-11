@@ -23,7 +23,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 - NPM, NodeJS (for parsing and processing subtitles)
 
 ## Usage
-Once dependencies are installed, download the script to your computer. Then, open the script, and adjust the built-in options as you see fit.
+Once dependencies are installed, download the script to your computer. Then, open the script in a text editor, and adjust the built-in configuration options as you see fit. If you don't know what to set an option to, leaving it at the default value is usually a good idea.
 
 Once the script is configured, name your input files `input.(audio format)` and `input.(image format)`, and create a `speed.txt` file with a numeric speed multiplier (like `1.2`). Then run the script like so: `bash nightcore.sh`.
 

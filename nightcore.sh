@@ -38,12 +38,12 @@ export video_overlay_alpha=0.76
 export visualizer_overlay_alpha=0.8
 export thumbnail_overlay_alpha=0.8
 
-# Change the number of bars shown on the visualizer. If you want a smooth graph instead of a bargraph, set this to 3840.
+# Change the number of bars shown on the visualizer. If you want a smooth graph instead of a bargraph, set this to 0.
 export visualizer_bars=110
 
-# Change the blur used to smooth the visualizer during processing. If you're rendering a bargraph, set the visualizer_blur_power to 0 to disable blurring.
+# Change the blur used to further smooth the visualizer during processing (ignored when rendering a bargraph visualizer). Set the visualizer_blur_power to 0 to disable blurring.
 export visualizer_blur_radius=8
-export visualizer_blur_power=0
+export visualizer_blur_power=3
 
 # Change the maximum frequency shown on the visualizer in (will be adjusted slightly based on speed multiplier). Supported range is 120Hz - 20000Hz.
 export visualizer_max_freq=12500
@@ -60,7 +60,11 @@ if [ -s "options.sh" ]; then
 	echo "Loading config..."
 	source ./options.sh
 fi
-
+if [ "$visualizer_bars" -eq 0 ]; then
+	visualizer_bars=3840
+else
+	visualizer_blur_power=0
+fi
 ffloglevelstr="-loglevel error -y"
 fploglevelstr="-loglevel error -of csv=p=0"
 sxloglevelstr="-V1"
