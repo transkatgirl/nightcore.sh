@@ -194,8 +194,10 @@ function process_image {
 		w2x_scale=$height_scale
 	fi
 	if [ "$w2x_scale" -lt 2 ]; then
-		w2x_denoise=1
+		w2x_denoise=0
 	elif [ "$w2x_scale" -lt 3 ]; then
+		w2x_denoise=1
+	elif [ "$w2x_scale" -lt 4 ]; then
 		w2x_denoise=2
 	else
 		w2x_denoise=3
