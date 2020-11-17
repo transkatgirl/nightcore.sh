@@ -107,7 +107,7 @@ if [ -f "info.txt" ]; then
 		cp info.txt $info_text_short
 	fi
 elif [ -d "$script_dir/.git" ]; then
-	echo "nightcore.sh commit $(git rev-parse --short HEAD)" > $info_text
+	echo "nightcore.sh commit $(git -C "$script_dir" rev-parse --short HEAD)" > $info_text
 	cp $info_text $info_text_short
 fi
 
