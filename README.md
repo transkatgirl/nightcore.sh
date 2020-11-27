@@ -39,9 +39,10 @@ If you would like a smaller video file to share directly, run `sh compress.sh` i
 
 ### Special files
 Different input files can be used to affect the functionality of nightcore.sh. A list of all files nightcore.sh can use is below.
-- \[required\] input.(audio format) - Audio that will be processed and used as the video's music. Should not be longer than 6 minutes.
+- \[required\] input.(audio format) - Audio that will be processed and used as the video's music.
+  - Should not be longer than 6 minutes.
   - Metadata will be removed from the audio file during processing.
-- \[required\] input.(image format) - Image that will be processed and used as the video's background. Should be 1920x1080 or greater, if possible.
+- \[required\] input.(image format) - Image that will be processed and used as the video's background.
   - If the file is animated, only the first frame of the animation will be used.
   - If the file is transparent, transparency will be replaced with solid white.
 - \[required\] speed.txt - Speed multiplier to speed up/slow down audio by.
