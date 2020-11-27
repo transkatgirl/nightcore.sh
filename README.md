@@ -25,11 +25,17 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 ## Usage
 Once dependencies are installed, download the script to your computer. Then, open the script in a text editor, and adjust the built-in configuration options as you see fit. If you don't know what to set an option to, leaving it at the default value is usually a good idea.
 
-Once the script is configured, name your input files `input.(audio format)` and `input.(image format)`, and create a `speed.txt` file with a numeric speed multiplier (like `1.2`). Then run the script like so: `bash nightcore.sh`.
-
-Useful speed multipliers range from 1.1 to 1.3, different songs will likely need to be set to different speeds.
+Once the script is configured, name your input files `input.(audio format)` and `input.(image format)`, and create a `speed.txt` file with a numeric speed multiplier (like `1.2`). Then run the script in a terminal using this command: `bash nightcore.sh`.
 
 When running the script, please make sure you have at least 6GB of available system RAM.
+Useful speed multipliers range from 1.1 to 1.3, different songs will likely need to be set to different speeds.
+
+### Output
+The script will typically output 2-3 files: output.mkv (generated video), output.thumbnail.png (generated thumbnail image), and output.srt (generated subtitle file, optional). If you are planning on uploading your video to a video sharing service, upload these files, and avoid doing any format conversions to the video and thumbnail files if possible (re-encoding will result in a significant quality loss).
+
+If you would like an audio-only file, run this FFMPEG command: `ffmpeg -i output.mkv -vn -acodec copy output.flac`. This will create an output audio file for uploading to audio sharing services. Avoid doing any format conversions to this file if possible.
+
+If you would like a smaller video file to share directly, run `sh compress.sh` in the same folder as the video file. This will create a far smaller compressed version of the video, which can be uploaded to file sharing sites and streamed directly. Do not upload the compressed video to video sharing sites like YouTube.
 
 ### Special files
 Different input files can be used to affect the functionality of nightcore.sh. A list of all files nightcore.sh can use is below.
