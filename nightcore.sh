@@ -197,7 +197,7 @@ function process_image {
 		w2x_denoise=0
 	elif [ "$w2x_scale" -le 3 ]; then
 		w2x_denoise=1
-	elif [ "$w2x_scale" -le 4 ]; then
+	elif [ "$w2x_scale" -le 5 ]; then
 		w2x_denoise=2
 	else
 		w2x_denoise=3
