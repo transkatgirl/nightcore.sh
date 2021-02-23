@@ -49,7 +49,7 @@ export visualizer_blur_power=3
 export visualizer_max_freq=12500
 
 # Change the sensitivity of the visualizer. Supported range is 1 - 0.001
-export visualizer_sens=0.3
+export visualizer_sens=0.25
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
@@ -407,7 +407,6 @@ rm "$image_end"
 echo "Rendering video..."
 video_output="output.mkv"
 ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy $video_output
-rm $audio_output
 rm $image_output
 while [[ ! -f "$image_thumbnail_end" ]]; do
 	sleep 0.1
