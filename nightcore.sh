@@ -49,7 +49,7 @@ export visualizer_blur_power=3
 export visualizer_max_freq=12500
 
 # Change the sensitivity of the visualizer. Supported range is 1 - 0.001
-export visualizer_sens=0.25
+export visualizer_sens=0.2
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
@@ -341,20 +341,20 @@ done
 rm $audio_end
 
 # Create video filtergraph
-x=0
-y=0
+x=80
+y=80
 newx=0
 newy=0
-filterx="0"
-filtery="0"
+filterx="80"
+filtery="80"
 for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	while [ $(echo $(($newx-$x)) | tr -d -) -lt 30 ] && [ $(echo $(($newy-$y)) | tr -d -) -lt 30 ]; do
-		newx=$((($RANDOM % (120-$x))))
-		newy=$((($RANDOM % (120-$y))))
+		newx=$(shuf -i 0-$((160-x)) -n 1)
+		newy=$(shuf -i 0-$((160-y)) -n 1)
 	done
 	while [ $(echo $(($newx-$x)) | tr -d -) -gt 90 ] || [ $(echo $(($newy-$y)) | tr -d -) -gt 90 ]; do
-		newx=$((($RANDOM % (120-$x))))
-		newy=$((($RANDOM % (120-$y))))
+		newx=$(shuf -i 0-$((160-x)) -n 1)
+		newy=$(shuf -i 0-$((160-y)) -n 1)
 	done
 	filterx="if(gt(t/4\,$i)\,$x+($(($newx-$x))*(sqrt((t/4)-$i)*(sin(((t/4)-$i)*PI/2))))\,$filterx)"
 	filtery="if(gt(t/4\,$i)\,$y+($(($newy-$y))*(sqrt((t/4)-$i)*(sin(((t/4)-$i)*PI/2))))\,$filtery)"
