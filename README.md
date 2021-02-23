@@ -19,7 +19,7 @@ A Bash script that allows you to easily create "Nightcore" versions of songs.
 ### Optional
 - MKVToolNix (for embedding thumbnail into video)
 - pngcrush (for further compressing thumbnail)
-- FLAC (for further compressing audio)
+- FLAC (for further compressing audio and embedding thumbnail into audio)
 - NPM, NodeJS (for parsing and processing subtitles)
 
 ## Usage

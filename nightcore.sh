@@ -118,8 +118,8 @@ fi
 audio_begin="$tmpdir/begin_audio"
 audio_end="$tmpdir/finish_audio"
 audio_stage1="$tmpdir/stage1.wav"
-audio_output="$tmpdir/output.wav"
-audio_output_alt="$tmpdir/output.flac"
+audio_stage2="$tmpdir/output.wav"
+audio_output="output.flac"
 audio_title="$tmpdir/title.txt"
 audio_title_short="$tmpdir/title_short.txt"
 function process_audio {
@@ -156,14 +156,18 @@ function process_audio {
 	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA:" | awk '{ print $3+0 }')
 	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold:" | awk '{ print $3+0 }')
 	loudnorm_offset=$(echo "$loudnorm" | grep "Target Offset:" | awk '{ print $3+0 }')
-	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" -map_metadata -1 $audio_output
+	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" -map_metadata -1 $audio_stage2
 
 	rm $audio_stage1
-	if [ `command -v flac` ] && [ ! -f "$image_end" ]; then
-		# Only bother futher compressing the audio if there's time to do so.
-		echo "Compressing audio..."
-		flac --totally-silent --best -e -l 12 -p -r 0,8 -o "$audio_output_alt" "$audio_output"
+
+	echo "Compressing audio..."
+	if [ `command -v flac` ]; then
+		flac --totally-silent --force --best -e -l 12 -p -r 0,8 -o "$audio_output" "$audio_stage2"
+	else
+		ffmpeg $ffloglevelstr -i $audio_stage2 -c:a flac -compression_level 12 -exact_rice_parameters 1 "$audio_output"
 	fi
+	rm $audio_stage2
+
 	touch $audio_end
 }
 
@@ -267,6 +271,14 @@ function process_image {
 		pngcrush -s -brute -ow $image_output_thumbnail
 	fi
 	touch $image_thumbnail_end
+
+	while [[ ! -f "$audio_output" ]]; do
+		sleep 0.1
+	done
+
+	if [ `command -v metaflac` ]; then
+		metaflac --import-picture-from=$image_output_thumbnail $audio_output
+	fi
 }
 
 subtitle_stage1="$tmpdir/stage1.ass"
@@ -381,7 +393,7 @@ elif [ -s "$info_text" ]; then
 else
 	atext="null"
 fi
-filtergraph="[0:a]showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:bar_v=20dB*a_weighting(f):sono_g=1:bar_g=7:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+filtergraph="[0:a]volume=8dB,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=16*b_weighting(f):bar_v=16*a_weighting(f):sono_g=1:bar_g=2:tc=0.15:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
@@ -393,12 +405,8 @@ rm "$image_end"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
-if [ -s "$audio_output_alt" ]; then
-	ffmpeg $ffloglevelstr -stats -i $audio_output_alt -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy output.mkv
-	rm "$audio_output_alt"
-else
-	ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a flac -compression_level 12 -exact_rice_parameters 1 output.mkv
-fi
+video_output="output.mkv"
+ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy $video_output
 rm $audio_output
 rm $image_output
 while [[ ! -f "$image_thumbnail_end" ]]; do
@@ -406,7 +414,7 @@ while [[ ! -f "$image_thumbnail_end" ]]; do
 done
 rm "$image_thumbnail_end"
 if [ `command -v mkvpropedit` ]; then
-	mkvpropedit -q output.mkv --attachment-name cover_land.png --attachment-mime-type "image/png" --add-attachment $image_output_thumbnail
+	mkvpropedit -q $video_output --attachment-name cover_land.png --attachment-mime-type "image/png" --add-attachment $image_output_thumbnail
 fi
 
 # Clean up temporary directory
