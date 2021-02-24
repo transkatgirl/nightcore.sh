@@ -352,7 +352,7 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 		newx=$(shuf -i 0-$((160-x)) -n 1)
 		newy=$(shuf -i 0-$((160-y)) -n 1)
 	done
-	while [ $(echo $(($newx-$x)) | tr -d -) -gt 90 ] || [ $(echo $(($newy-$y)) | tr -d -) -gt 90 ]; do
+	while [ $(echo $(($newx-$x)) | tr -d -) -gt 60 ] || [ $(echo $(($newy-$y)) | tr -d -) -gt 60 ]; do
 		newx=$(shuf -i 0-$((160-x)) -n 1)
 		newy=$(shuf -i 0-$((160-y)) -n 1)
 	done
