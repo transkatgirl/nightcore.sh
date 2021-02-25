@@ -171,6 +171,8 @@ function process_audio {
 	touch "$audio_end"
 }
 
+filtergraph_end="$tmpdir/finish_filtergraph"
+
 # Remove metadata, trim image, AI upscale image, crop image to 4000x2320, and generate thumbnail.
 # Note: Image trimming must be done before upscaling, to ensure final image is >=4000x2320.
 # Image cropping must be done after upscaling, to ensure input image >=4000x2320.
@@ -266,10 +268,9 @@ function process_image {
 	rm "$image_stage4"
 
 	if [ `command -v metaflac` ]; then
-		while [[ ! -f "$audio_end" ]]; do
+		while [[ ! -f "$filtergraph_end" ]]; do
 			sleep 0.1
 		done
-		sleep 4
 		metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
 	fi
 
@@ -390,6 +391,7 @@ fi
 filtergraph="[0:a]volume=5dB,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=16*b_weighting(f):bar_v=16*a_weighting(f):sono_g=1:bar_g=3:tc=0.15:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo "$visualizer_overlay_alpha" | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
+touch "$filtergraph_end"
 
 # Wait for image processing to complete
 while [[ ! -f "$image_end" ]]; do
