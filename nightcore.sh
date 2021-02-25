@@ -223,7 +223,6 @@ function process_image {
 	magick "$image_stage2" -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage "$image_output"
 
 	echo "Generating thumbnail..."
-	touch "$image_end"
 
 	rm "$image_stage2"
 	magick "$image_output" -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 "$image_stage3"
@@ -273,6 +272,8 @@ function process_image {
 		sleep 4
 		metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
 	fi
+
+	touch "$image_end"
 
 	if [ `command -v pngcrush` ]; then
 		pngcrush -s -brute -ow "$image_output_thumbnail"
