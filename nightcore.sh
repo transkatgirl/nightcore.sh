@@ -270,7 +270,7 @@ function process_image {
 		while [[ ! -f "$audio_end" ]]; do
 			sleep 0.1
 		done
-
+		sleep 4
 		metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
 	fi
 
