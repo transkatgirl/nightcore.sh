@@ -266,6 +266,14 @@ function process_image {
 	convert "$image_stage4" -quality 100 "$image_output_thumbnail"
 	rm "$image_stage4"
 
+	if [ `command -v metaflac` ]; then
+		while [[ ! -f "$audio_end" ]]; do
+			sleep 0.1
+		done
+
+		metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
+	fi
+
 	if [ `command -v pngcrush` ]; then
 		pngcrush -s -brute -ow "$image_output_thumbnail"
 	fi
@@ -390,12 +398,13 @@ done
 # Render video with generated filtergraph
 echo "Rendering video..."
 video_output="output.mkv"
-ffmpeg $ffloglevelstr -stats -i "$audio_output" -i "$image_output" -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy "$video_output"
+ffmpeg $ffloglevelstr -stats -i "$audio_output" -i "$image_output" -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy -map_metadata -1 "$video_output"
 rm "$image_output"
 while [[ ! -f "$image_thumbnail_end" ]]; do
 	sleep 0.1
 done
 if [ `command -v metaflac` ]; then
+	metaflac --remove --block-type=PICTURE --dont-use-padding "$audio_output"
 	metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
 fi
 if [ `command -v mkvpropedit` ]; then
