@@ -270,14 +270,6 @@ function process_image {
 		pngcrush -s -brute -ow "$image_output_thumbnail"
 	fi
 	touch "$image_thumbnail_end"
-
-	while [[ ! -f "$audio_end" ]]; do
-		sleep 0.1
-	done
-
-	if [ `command -v metaflac` ]; then
-		metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
-	fi
 }
 
 subtitle_stage1="$tmpdir/stage1.ass"
@@ -403,6 +395,9 @@ rm "$image_output"
 while [[ ! -f "$image_thumbnail_end" ]]; do
 	sleep 0.1
 done
+if [ `command -v metaflac` ]; then
+	metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
+fi
 if [ `command -v mkvpropedit` ]; then
 	mkvpropedit -q "$video_output" --attachment-name cover_land.png --attachment-mime-type "image/png" --add-attachment "$image_output_thumbnail"
 fi
