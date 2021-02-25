@@ -80,35 +80,35 @@ if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `comman
 	exit
 fi
 if [ `command -v npm` ] && [ `command -v node` ] && [ ! -d "$script_dir/subtitles/node_modules" ]; then
-	npm install --prefix $script_dir/subtitles
+	npm install --prefix "$script_dir/subtitles"
 fi
 
 if [[ ! -s "speed.txt" ]]; then
 	echo "Please create a speed.txt file stating the speed multiplier you want to use (like 1.1 or 1.2)."
 	exit
 fi
-audio_speed=$(cat speed.txt)
+audio_speed="$(cat "speed.txt")"
 
 # Initalize temporary directory.
 tmpdir="$temporary_directory"
-rm -rf $tmpdir
-mkdir -p $tmpdir
+rm -rf "$tmpdir"
+mkdir -p "$tmpdir"
 
 echo "Note: Image and audio processing is multi-threaded, so the last console log message may not be the active processing step."
 
 # Generate info text
-info_text="$tmpdir/info.txt"
-info_text_short="$tmpdir/info_short.txt"
+info_text=""
+info_text_short=""
 if [ -f "info.txt" ]; then
-	cp info.txt $info_text
+	info_text="$(cat info.txt)"
 	if [ -f "info_short.txt" ]; then
-		cp info_short.txt $info_text_short
+		info_text_short="$(cat info_short.txt)"
 	else
-		cp info.txt $info_text_short
+		info_text_short="$info_text"
 	fi
 elif [ -d "$script_dir/.git" ]; then
-	echo "nightcore.sh commit $(git -C "$script_dir" rev-parse --short HEAD)" > $info_text
-	cp $info_text $info_text_short
+	info_text="nightcore.sh commit $(git -C "$script_dir" rev-parse --short HEAD)"
+	info_text_short="$info_text"
 fi
 
 # Remove metadata, fix clipping, speed up audio, normalize volume, and generate title text.
@@ -123,52 +123,52 @@ audio_output="output.flac"
 audio_title="$tmpdir/title.txt"
 audio_title_short="$tmpdir/title_short.txt"
 function process_audio {
-	touch $audio_begin
+	touch "$audio_begin"
 
-	artist=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=ARTIST "$1")
-	title=$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")
+	artist="$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=ARTIST "$1")"
+	title="$(ffprobe $fploglevelstr -select_streams a:0 -show_entries format_tags=TITLE "$1")"
 	
 	if [ -f "title.txt" ]; then
-		cp title.txt $audio_title
+		cp title.txt "$audio_title"
 		if [ -f "title_short.txt" ]; then
-			cp title_short.txt $audio_title_short
+			cp title_short.txt "$audio_title_short"
 		else
-			cat title.txt | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
+			cat title.txt | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > "$audio_title_short"
 		fi
 	elif [ ! -z "$artist" ] && [ ! -z "$title" ]; then
-		echo "$artist - $title" | tr -d \" | sed 's/, / \& /g' > $audio_title
-		echo "$(echo $artist | sed 's/,.*//') - $title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
+		echo "$artist - $title" | tr -d \" | sed 's/, / \& /g' > "$audio_title"
+		echo "$(echo "$artist" | sed 's/,.*//') - $title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > "$audio_title_short"
 	elif [ ! -z "$artist" ]; then
-		echo "$artist" | tr -d \" | sed 's/, / \& /g' > $audio_title
-		echo "$artist" | tr -d \" | sed 's/, / \& /g' | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
+		echo "$artist" | tr -d \" | sed 's/, / \& /g' > "$audio_title"
+		echo "$artist" | tr -d \" | sed 's/, / \& /g' | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > "$audio_title_short"
 	elif [ ! -z "$title" ]; then
-		echo "$title" | tr -d \" | sed 's/, / \& /g' > $audio_title
-		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > $audio_title_short
+		echo "$title" | tr -d \" | sed 's/, / \& /g' > "$audio_title"
+		echo "$title" | tr -d \" | sed 's/([^)]*)//g;s/  / /g' | sed "s/Featuring.*//" > "$audio_title_short"
 	fi
 
 	echo "Processing audio..."
-	ffmpeg $ffloglevelstr -i "$1" -vn -af "volume=-15dB,adeclip=a=25:n=500:m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-90dB:start_mode=all:stop_periods=-1:stop_threshold=-90dB" $audio_stage1
+	ffmpeg $ffloglevelstr -i "$1" -vn -af "volume=-15dB,adeclip=a=25:n=500:m=s" -f sox - | sox $sxloglevelstr -p -p --guard --multi-threaded --buffer 1000000 speed "$2" rate -v -I 48k gain -n | ffmpeg $ffloglevelstr -f sox -i - -af "afade=t=in:ss=0:d=0.5:curve=squ,silenceremove=start_threshold=-90dB:start_mode=all:stop_periods=-1:stop_threshold=-90dB" "$audio_stage1"
 
 	echo "Normalizing audio loudness..."
-	loudnorm=$(ffmpeg -i $audio_stage1 -af "loudnorm=print_format=summary:tp=-1:i=-14:lra=20" -f null - 2>&1)
-	loudnorm_i=$(echo "$loudnorm" | grep "Input Integrated:" | awk '{ print $3+0 }')
-	loudnorm_tp=$(echo "$loudnorm" | grep "Input True Peak:" | awk '{ print $4+0 }')
-	loudnorm_lra=$(echo "$loudnorm" | grep "Input LRA:" | awk '{ print $3+0 }')
-	loudnorm_thresh=$(echo "$loudnorm" | grep "Input Threshold:" | awk '{ print $3+0 }')
-	loudnorm_offset=$(echo "$loudnorm" | grep "Target Offset:" | awk '{ print $3+0 }')
-	ffmpeg $ffloglevelstr -i $audio_stage1 -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" -map_metadata -1 $audio_stage2
+	loudnorm="$(ffmpeg -i "$audio_stage1" -af "loudnorm=print_format=summary:tp=-1:i=-14:lra=20" -f null - 2>&1)"
+	loudnorm_i="$(echo "$loudnorm" | grep "Input Integrated:" | awk '{ print $3+0 }')"
+	loudnorm_tp="$(echo "$loudnorm" | grep "Input True Peak:" | awk '{ print $4+0 }')"
+	loudnorm_lra="$(echo "$loudnorm" | grep "Input LRA:" | awk '{ print $3+0 }')"
+	loudnorm_thresh="$(echo "$loudnorm" | grep "Input Threshold:" | awk '{ print $3+0 }')"
+	loudnorm_offset="$(echo "$loudnorm" | grep "Target Offset:" | awk '{ print $3+0 }')"
+	ffmpeg $ffloglevelstr -i "$audio_stage1" -af "loudnorm=linear=true:tp=-1:i=-14:lra=20:measured_i=$loudnorm_i:measured_lra=$loudnorm_lra:measured_tp=$loudnorm_tp:measured_thresh=$loudnorm_thresh:offset=$loudnorm_offset" -map_metadata -1 "$audio_stage2"
 
-	rm $audio_stage1
+	rm "$audio_stage1"
 
 	echo "Compressing audio..."
 	if [ `command -v flac` ]; then
 		flac --totally-silent --force --best -e -l 12 -p -r 0,8 -o "$audio_output" "$audio_stage2"
 	else
-		ffmpeg $ffloglevelstr -i $audio_stage2 -c:a flac -compression_level 12 -exact_rice_parameters 1 "$audio_output"
+		ffmpeg $ffloglevelstr -i "$audio_stage2" -c:a flac -compression_level 12 -exact_rice_parameters 1 "$audio_output"
 	fi
-	rm $audio_stage2
+	rm "$audio_stage2"
 
-	touch $audio_end
+	touch "$audio_end"
 }
 
 # Remove metadata, trim image, AI upscale image, crop image to 4000x2320, and generate thumbnail.
@@ -184,18 +184,18 @@ image_stage4="$tmpdir/stage4.ppm"
 image_output="$tmpdir/output.ppm"
 image_output_thumbnail="output.thumbnail.png"
 function process_image {
-	touch $image_begin
+	touch "$image_begin"
 	echo "Processing image..."
-	ffmpeg $ffloglevelstr -i $1 -an -vframes 1 -map_metadata -1 -vcodec png -sws_flags +accurate_rnd+full_chroma_int -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim $image_stage1
+	ffmpeg $ffloglevelstr -i "$1" -an -vframes 1 -map_metadata -1 -vcodec png -sws_flags +accurate_rnd+full_chroma_int -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim "$image_stage1"
 
-	width=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width $image_stage1)
-	width_scale=$(echo "$width" | awk '{ print int((4000/$1)+0.99999) }')
-	height=$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height $image_stage1)
-	height_scale=$(echo "$height" | awk '{ print int((2320/$1)+0.99999) }')
+	width="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage1")"
+	width_scale="$(echo "$width" | awk '{ print int((4000/$1)+0.99999) }')"
+	height="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height "$image_stage1")"
+	height_scale="$(echo "$height" | awk '{ print int((2320/$1)+0.99999) }')"
 	if [ "$width_scale" -ge "$height_scale" ]; then
-		w2x_scale=$width_scale
+		w2x_scale="$width_scale"
 	else
-		w2x_scale=$height_scale
+		w2x_scale="$height_scale"
 	fi
 	if [ "$w2x_scale" -le 2 ]; then
 		w2x_denoise=0
@@ -208,12 +208,11 @@ function process_image {
 	fi
 	if [ "$w2x_scale" -gt 1 ]; then
 		echo "Upscaling and denoising image..."
-		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $w2x_denoise -i $image_stage1 -o $image_stage2
+		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $w2x_denoise -i "$image_stage1" -o "$image_stage2"
+		rm "$image_stage1"
 	else
-		cp $image_stage1 $image_stage2
+		mv "$image_stage1" "$image_stage2"
 	fi
-
-	rm $image_stage1
 
 	echo "Cropping image..."
 	if [ $(echo $width $height | awk '{ print int(($1/$2)*100) }') -gt 130 ]; then
@@ -221,20 +220,20 @@ function process_image {
 	else
 		gravity="North"
 	fi
-	magick $image_stage2 -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage $image_output
+	magick "$image_stage2" -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage "$image_output"
 
 	echo "Generating thumbnail..."
-	touch $image_end
+	touch "$image_end"
 
-	rm $image_stage2
-	magick $image_output -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 $image_stage3
+	rm "$image_stage2"
+	magick "$image_output" -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 "$image_stage3"
 
 	while [[ ! -f "$audio_output" ]]; do
 		sleep 0.1
 	done
-	font_size=$(echo $thumbnail_font_multiplier | awk '{print int(($1 * (80/3))+0.5) }')
-	info_font_size=$(echo $thumbnail_font_multiplier $thumbnail_info_multiplier | awk '{print int(($1 * $2 * (80/3))+0.5) }')
-	padding=$(echo $thumbnail_padding_multiplier | awk '{print int(($1 * (25/3))+0.5)}')
+	font_size="$(echo "$thumbnail_font_multiplier" | awk '{print int(($1 * (80/3))+0.5) }')"
+	info_font_size="$(echo $thumbnail_font_multiplier $thumbnail_info_multiplier | awk '{print int(($1 * $2 * (80/3))+0.5) }')"
+	padding="$(echo $thumbnail_padding_multiplier | awk '{print int(($1 * (25/3))+0.5)}')"
 	if [ "$thumbnail_font_align" == "right" ]; then
 		font_x="$((1280-($padding*3)))-text_w"
 		font_alt_x="$(($padding*3))"
@@ -246,53 +245,52 @@ function process_image {
 		font_alt_x="$((1280-($padding*3)))-text_w"
 	fi
 	if [ -s "$audio_title_short" ]; then
-		ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat $audio_title_short)':x=$font_x:y=$(($padding*3)):alpha=0.8"
+		ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat "$audio_title_short")':x=$font_x:y=$(($padding*3)):alpha=0.8"
 		if [ ! $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
 			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='[${audio_speed}x speed]':x=$font_x:y=$((($padding*6)+$font_size)):alpha=$thumbnail_overlay_alpha"
 		fi
-		if [ -s "$info_text_short" ]; then
-			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
+		if [ -n "$info_text_short" ]; then
+			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$info_text_short':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
-		ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
+		ffmpeg $ffloglevelstr -i "$image_stage3" -vf "$ttext" "$image_stage4"
 	else
-		if [ -s "$info_text_short" ]; then
-			ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text_short)':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
-			ffmpeg $ffloglevelstr -i $image_stage3 -vf "$ttext" $image_stage4
+		if [ -n "$info_text_short" ]; then
+			ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$info_text_short':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
+			ffmpeg $ffloglevelstr -i "$image_stage3" -vf "$ttext" "$image_stage4"
 		else
-			cp $image_stage3 $image_stage4
+			cp "$image_stage3" "$image_stage4"
 		fi
 	fi
-	rm $image_stage3
+	rm "$image_stage3"
 
-	convert $image_stage4 -quality 100 $image_output_thumbnail
-	rm $image_stage4
+	convert "$image_stage4" -quality 100 "$image_output_thumbnail"
+	rm "$image_stage4"
 
 	if [ `command -v pngcrush` ]; then
-		pngcrush -s -brute -ow $image_output_thumbnail
+		pngcrush -s -brute -ow "$image_output_thumbnail"
 	fi
-	touch $image_thumbnail_end
+	touch "$image_thumbnail_end"
 
-	while [[ ! -f "$audio_output" ]]; do
+	while [[ ! -f "$audio_end" ]]; do
 		sleep 0.1
 	done
 
 	if [ `command -v metaflac` ]; then
-		metaflac --import-picture-from=$image_output_thumbnail $audio_output
+		metaflac --import-picture-from="$image_output_thumbnail" "$audio_output"
 	fi
 }
 
 subtitle_stage1="$tmpdir/stage1.ass"
 subtitle_stage2="$tmpdir/stage2.srt"
-subtitle_output="$tmpdir/output.srt"
+subtitle_output="output.srt"
 function process_subtitles {
 	if [ `command -v node` ] && [ -d "$script_dir/subtitles/node_modules" ]; then
 		echo "Processing subtitles..."
-		ffmpeg $ffloglevelstr -i $1 -map_metadata -1 $subtitle_stage1
-		node $script_dir/subtitles/index.js "$2" "$subtitle_stage1" "$subtitle_stage2"
-		rm $subtitle_stage1
-		ffmpeg $ffloglevelstr -i $subtitle_stage2 $subtitle_output
-		rm $subtitle_stage2
-		cp $subtitle_output output.srt
+		ffmpeg $ffloglevelstr -i "$1" -map_metadata -1 "$subtitle_stage1"
+		node "$script_dir/subtitles/index.js" "$2" "$subtitle_stage1" "$subtitle_stage2"
+		rm "$subtitle_stage1"
+		ffmpeg $ffloglevelstr -i "$subtitle_stage2" "$subtitle_output"
+		rm "$subtitle_stage2"
 	fi
 }
 
@@ -307,8 +305,6 @@ sleep 0.1
 if [[ ! -f "$audio_begin" ]]; then
 	echo "Input audio is required! File must be named input.(extension)"
 	exit
-else
-	rm "$audio_begin"
 fi
 
 
@@ -323,8 +319,6 @@ sleep 0.1
 if [[ ! -f "$image_begin" ]]; then
 	echo "Input image is required! File must be named input.(extension)"
 	exit
-else
-	rm "$image_begin"
 fi
 
 for i in "${sfiletypes[@]}"; do
@@ -338,7 +332,6 @@ done
 while [[ ! -f "$audio_end" ]]; do
 	sleep 0.1
 done
-rm $audio_end
 
 # Create video filtergraph
 x=80
@@ -347,7 +340,7 @@ newx=0
 newy=0
 filterx="80"
 filtery="80"
-for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
+for i in $(seq 0 $(soxi -D "$audio_output" | awk '{ print int(($1/4) + 1) }')); do
 	while [ $(echo $(($newx-$x)) | tr -d -) -lt 30 ] && [ $(echo $(($newy-$y)) | tr -d -) -lt 30 ]; do
 		newx=$(shuf -i 0-$((160-x)) -n 1)
 		newy=$(shuf -i 0-$((160-y)) -n 1)
@@ -361,14 +354,14 @@ for i in $(seq 0 $(soxi -D $audio_output | awk '{ print int(($1/4) + 1) }')); do
 	x=$newx
 	y=$newy
 done
-visualizer_start=$(echo $audio_speed | awk '{ print $1 * 20 }')
-visualizer_end=$(echo $audio_speed | awk '{ print $1 * '$visualizer_max_freq' }')
-font_size=$(echo $video_font_multiplier | awk '{print int(($1 * 80)+0.5) }')
-info_font_size=$(echo $video_font_multiplier $video_info_multiplier | awk '{print int(($1 * $2 * 80)+0.5) }')
-padding=$(echo $video_padding_multiplier | awk '{print int(($1 * 25)+0.5)}')
-visualizer_r=$((16#${visualizer_overlay_color:1:2}))
-visualizer_g=$((16#${visualizer_overlay_color:3:2}))
-visualizer_b=$((16#${visualizer_overlay_color:5:2}))
+visualizer_start=$(echo "$audio_speed" | awk '{ print $1 * 20 }')
+visualizer_end=$(echo "$audio_speed" | awk '{ print $1 * '$visualizer_max_freq' }')
+font_size=$(echo "$video_font_multiplier" | awk '{print int(($1 * 80)+0.5) }')
+info_font_size=$(echo "$video_font_multiplier" "$video_info_multiplier" | awk '{print int(($1 * $2 * 80)+0.5) }')
+padding=$(echo "$video_padding_multiplier" | awk '{print int(($1 * 25)+0.5)}')
+visualizer_r="$((16#${visualizer_overlay_color:1:2}))"
+visualizer_g="$((16#${visualizer_overlay_color:3:2}))"
+visualizer_b="$((16#${visualizer_overlay_color:5:2}))"
 if [ "$video_font_align" == "right" ]; then
 	font_x="$((3840-($padding*3)))-text_w"
 elif [ "$video_font_align" == "center" ]; then
@@ -385,15 +378,15 @@ if [ -s "$audio_title" ]; then
 		rtext="[${audio_speed}x speed] $(cat $audio_title)"
 	fi
 	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$rtext':x=$font_x:y=$(($padding*3)):alpha=$video_overlay_alpha"
-	if [ -s "$info_text" ]; then
-		atext="$atext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$font_x:y=$((($padding*6)+$font_size)):alpha=$video_overlay_alpha"
+	if [ -n "$info_text" ]; then
+		atext="$atext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$info_text':x=$font_x:y=$((($padding*6)+$font_size)):alpha=$video_overlay_alpha"
 	fi
-elif [ -s "$info_text" ]; then
-	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$(cat $info_text)':x=$font_x:y=$(($padding*3)):alpha=$video_overlay_alpha"
+elif [ -n "$info_text" ]; then
+	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$info_text':x=$font_x:y=$(($padding*3)):alpha=$video_overlay_alpha"
 else
 	atext="null"
 fi
-filtergraph="[0:a]volume=5dB,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=16*b_weighting(f):bar_v=16*a_weighting(f):sono_g=1:bar_g=3:tc=0.15:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo $visualizer_overlay_alpha | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+filtergraph="[0:a]volume=5dB,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=16*b_weighting(f):bar_v=16*a_weighting(f):sono_g=1:bar_g=3:tc=0.15:count=30:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo "$visualizer_overlay_alpha" | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 
@@ -401,20 +394,18 @@ filtergraph="[0:a]volume=5dB,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:son
 while [[ ! -f "$image_end" ]]; do
 	sleep 0.1
 done
-rm "$image_end"
 
 # Render video with generated filtergraph
 echo "Rendering video..."
 video_output="output.mkv"
-ffmpeg $ffloglevelstr -stats -i $audio_output -i $image_output -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy $video_output
-rm $image_output
+ffmpeg $ffloglevelstr -stats -i "$audio_output" -i "$image_output" -c:v libx265 -r 60 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy "$video_output"
+rm "$image_output"
 while [[ ! -f "$image_thumbnail_end" ]]; do
 	sleep 0.1
 done
-rm "$image_thumbnail_end"
 if [ `command -v mkvpropedit` ]; then
-	mkvpropedit -q $video_output --attachment-name cover_land.png --attachment-mime-type "image/png" --add-attachment $image_output_thumbnail
+	mkvpropedit -q "$video_output" --attachment-name cover_land.png --attachment-mime-type "image/png" --add-attachment "$image_output_thumbnail"
 fi
 
 # Clean up temporary directory
-rm -rf $tmpdir
+rm -rf "$tmpdir"
