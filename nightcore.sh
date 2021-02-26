@@ -346,11 +346,11 @@ done
 # Create video filtergraph
 x=80
 y=80
-newx=0
-newy=0
 filterx="80"
 filtery="80"
 for i in $(seq 0 $(soxi -D "$audio_output" | awk '{ print int(($1/4) + 1) }')); do
+	newx=80
+	newy=80
 	while [ $(echo $(($newx-$x)) | tr -d -) -lt 30 ] && [ $(echo $(($newy-$y)) | tr -d -) -lt 30 ]; do
 		newx=$(shuf -i 0-$((160-x)) -n 1)
 		newy=$(shuf -i 0-$((160-y)) -n 1)
