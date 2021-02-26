@@ -56,7 +56,7 @@ export visualizer_sh_sono_gamma=1 # the sonograph is not actually rendered, but 
 export visualizer_sh_bar_gamma=3
 export visualizer_sh_timeclamp=0.15
 export visualizer_sh_vmult=12
-export visualizer_sh_sspeed=2 # although there's no actual sonograph, this still affects how quickly the bargraph updates
+export visualizer_sh_sspeed=3 # although there's no actual sonograph, this still affects how quickly the bargraph updates
 export visualizer_sh_afchain="volume=5dB"
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
