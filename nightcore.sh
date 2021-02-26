@@ -60,7 +60,7 @@ export visualizer_sh_sspeed=3 # although there's no actual sonograph, this still
 export visualizer_sh_afchain="volume=5dB"
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
-export x265_encoder_preset="slow"
+export x265_encoder_preset="medium"
 
 ##### Start of code
 
