@@ -59,8 +59,8 @@ export visualizer_sh_vmult=12
 export visualizer_sh_sspeed=3 # although there's no actual sonograph, this still affects how quickly the bargraph updates
 export visualizer_sh_afchain="volume=5dB"
 
-# Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
-export x265_encoder_preset="medium"
+# Change the lossless x264 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
+export x264_encoder_preset="medium"
 
 ##### Start of code
 
@@ -409,7 +409,7 @@ done
 # Render video with generated filtergraph
 echo "Rendering video..."
 video_output="output.mkv"
-ffmpeg $ffloglevelstr -stats -i "$audio_output" -i "$image_output" -c:v libx265 -filter_complex "$filtergraph" -x265-params "lossless=1:log-level=error" -sws_flags +accurate_rnd+full_chroma_int -preset "$x265_encoder_preset" -c:a copy -map_metadata -1 "$video_output"
+ffmpeg $ffloglevelstr -stats -i "$audio_output" -i "$image_output" -c:v libx264rgb -crf 0 -filter_complex "$filtergraph" -sws_flags +accurate_rnd+full_chroma_int -preset "$x264_encoder_preset" -c:a copy -map_metadata -1 "$video_output"
 rm "$image_output"
 while [[ ! -f "$image_thumbnail_end" ]]; do
 	sleep 0.1
