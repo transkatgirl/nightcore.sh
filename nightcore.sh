@@ -409,7 +409,7 @@ done
 # Render video with generated filtergraph
 echo "Rendering video..."
 video_output="output.mkv"
-ffmpeg $ffloglevelstr -stats -i "$audio_output" -i "$image_output" -c:v libx264rgb -crf 0 -filter_complex "$filtergraph" -sws_flags +accurate_rnd+full_chroma_int -preset "$x264_encoder_preset" -c:a copy -map_metadata -1 "$video_output"
+ffmpeg $ffloglevelstr -stats -i "$audio_output" -i "$image_output" -c:v libx264rgb -crf 0 -g 999999 -filter_complex "$filtergraph" -sws_flags +accurate_rnd+full_chroma_int -preset "$x264_encoder_preset" -c:a copy -map_metadata -1 "$video_output"
 rm "$image_output"
 while [[ ! -f "$image_thumbnail_end" ]]; do
 	sleep 0.1
