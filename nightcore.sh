@@ -54,10 +54,10 @@ export visualizer_sens=0.2
 # Change advanced visualizer options. These act more-or-less the same way as the options in visualizer.sh (https://gist.github.com/katattakd/cc81d24f3b05db19a02373a085f207f7)
 export visualizer_sh_sono_gamma=1 # the sonograph is not actually rendered, but this still influences how the bargraph looks
 export visualizer_sh_bar_gamma=3
-export visualizer_sh_timeclamp=0.2
-export visualizer_sh_vmult=16
-export visualizer_sh_sspeed=1.6 # although there's no actual sonograph, this still affects how quickly the bargraph updates
-export visualizer_sh_afchain="volume=3dB"
+export visualizer_sh_timeclamp=0.15
+export visualizer_sh_vmult=12
+export visualizer_sh_sspeed=2 # although there's no actual sonograph, this still affects how quickly the bargraph updates
+export visualizer_sh_afchain="volume=5dB"
 
 # Change the x265 video compression preset used. Available options are ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, and placebo. Slower presets will result in more efficient compression.
 export x265_encoder_preset="slow"
@@ -396,7 +396,7 @@ elif [ -n "$info_text" ]; then
 else
 	atext="null"
 fi
-filtergraph="[0:a]$visualizer_sh_afchain,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=$visualizer_sh_vmult*b_weighting(f):bar_v=$visualizer_sh_vmult*a_weighting(f):sono_g=$visualizer_sh_sono_gamma:bar_g=$visualizer_sh_bar_gamma:tc=$visualizer_sh_timeclamp:count=$(echo $visualizer_sh_sspeed 1080 | awk '{ print ($1 * $2)/120 }'):basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo "$visualizer_overlay_alpha" | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
+filtergraph="[0:a]$visualizer_sh_afchain,showcqt=s=${visualizer_bars}x1080:r=60:axis_h=0:sono_h=0:sono_v=$visualizer_sh_vmult*b_weighting(f):bar_v=$visualizer_sh_vmult*a_weighting(f):sono_g=$visualizer_sh_sono_gamma:bar_g=$visualizer_sh_bar_gamma:tc=$visualizer_sh_timeclamp:count=$(echo $visualizer_sh_sspeed 1080 | awk '{ print ($1 * $2)/120 }'):attack=0.05:basefreq=$visualizer_start:endfreq=$visualizer_end:cscheme=$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens|$visualizer_sens,setsar=0,format=rgba,boxblur=luma_radius=$visualizer_blur_radius:luma_power=$visualizer_blur_power,colorkey=black:0.01:0,lut=c0=$visualizer_r:c1=$visualizer_g:c2=$visualizer_b:c3=if(val\,$(echo "$visualizer_overlay_alpha" | awk '{ print int(($1 * 255)+.5) }')\,0),scale=3840x1080:sws_flags=neighbor[visualizer];
 [1:v]format=pix_fmts=gbrp,loop=loop=-1:size=1,crop=3840:2160:$filterx:$filtery,$atext[background];
 [background][visualizer]overlay=shortest=1:x=0:y=1080:eval=init:format=gbrp"
 touch "$filtergraph_end"
