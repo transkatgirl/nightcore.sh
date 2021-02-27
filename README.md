@@ -31,9 +31,7 @@ When running the script, please make sure you have at least 6GB of available sys
 Useful speed multipliers range from 1.1 to 1.3, different songs will likely need to be set to different speeds.
 
 ### Output
-The script will typically output 2-3 files: output.mkv (generated video), output.thumbnail.png (generated thumbnail image), and output.srt (generated subtitle file, optional). If you are planning on uploading your video to a video sharing service, upload these files, and avoid doing any format conversions to the video and thumbnail files if possible (re-encoding will result in a significant quality loss).
-
-If you would like an audio-only file, run this FFMPEG command: `ffmpeg -i output.mkv -vn -acodec copy output.flac`. This will create an output audio file for uploading to audio sharing services. Avoid doing any format conversions to this file if possible.
+The script will typically output 3-4 files: output.mkv (generated video), output.flac (generated audio), output.thumbnail.png (generated thumbnail image), and output.srt (generated subtitle file, optional). If you are planning on uploading your video to a video sharing service, upload these files, and avoid doing any format conversions to the video and thumbnail files if possible (re-encoding will result in a significant quality loss).
 
 If you would like a smaller video file to share directly, run `sh compress.sh` in the same folder as the video file. This will create a far smaller compressed version of the video, which can be uploaded to file sharing sites and streamed directly. Do not upload the compressed video to video sharing sites like YouTube.
 
@@ -45,8 +43,9 @@ Different input files can be used to affect the functionality of nightcore.sh. A
 - \[required\] input.(image format) - Image that will be processed and used as the video's background.
   - If the file is animated, only the first frame of the animation will be used.
   - If the file is transparent, transparency will be replaced with solid white.
+  - If the file is not 16:9, it will be cropped automatically. The automatic cropping is not perfect, and some files may need to be manually cropped instead.
 - \[required\] speed.txt - Speed multiplier to speed up/slow down audio by.
-  - Should not contain any whitespace.
+  - Must not contain any whitespace.
   - Must be non-empty and a valid number.
 - input.(subtitle format) - Subtitles that will be processed and used as the video's lyrics.
   - Subtitles should match the original song's speed, as they will be sped up by the script.
