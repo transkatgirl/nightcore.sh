@@ -344,26 +344,65 @@ while [[ ! -f "$audio_end" ]]; do
 done
 
 # Create video filtergraph
+length=$(soxi -D "$audio_output" | awk '{ print int($1 + 1) }')
+
+function generate_glide {
+	filterin="((t-$i)/$pspeed)"              # x
+	filterequ_a="((-1*(($filterin-1)^2))+1)" # a(x) = -1 * ( x - 1 )^2 + 1
+	filterequ_b="sin($filterin*(PI/2))"      # b(x) = sin( x * ( pi / 2 ) )
+	filterequ_c="((-1*abs($filterin-1))+1)"  # c(x) = -1 * abs( x - 1 ) + 1
+
+	full_length_equ="false"
+	filterequ="sqrt($filterequ_c)*$filterequ_b"
+	#filterequ="$filterequ_b"
+	#filterequ="$filterequ_a"
+	#filterequ="$filterequ_a*$filterequ_b"
+	#filterequ="sqrt($filterequ_a*$filterequ_b)"
+	#filterequ="$filterequ_c"
+
+	filterp="if(gt(t\,$i)\,$p+($(($newp-$p))*($filterequ))\,$filterp)"
+}
+
 x=80
 y=80
 filterx="80"
 filtery="80"
-for i in $(seq 0 $(soxi -D "$audio_output" | awk '{ print int(($1/4) + 1) }')); do
-	newx=80
-	newy=80
-	while [ $(echo $(($newx-$x)) | tr -d -) -lt 30 ] && [ $(echo $(($newy-$y)) | tr -d -) -lt 30 ]; do
+newx=80
+newy=80
+speedmult=10
+i=0
+while [ $(echo $i | awk '{ print int( $1 ) }') -le $length ] ; do
+	while [ $(echo $(($newx-$x)) | tr -d -) -lt 20 ] || [ $(echo $(($newy-$y)) | tr -d -) -lt 20 ] || [ $(echo $(($newx-$x)) | tr -d -) -gt 60 ] || [ $(echo $(($newy-$y)) | tr -d -) -gt 60 ]; do
 		newx=$(shuf -i 0-$((160-x)) -n 1)
 		newy=$(shuf -i 0-$((160-y)) -n 1)
 	done
-	while [ $(echo $(($newx-$x)) | tr -d -) -gt 60 ] || [ $(echo $(($newy-$y)) | tr -d -) -gt 60 ]; do
-		newx=$(shuf -i 0-$((160-x)) -n 1)
-		newy=$(shuf -i 0-$((160-y)) -n 1)
-	done
-	filterx="if(gt(t/4\,$i)\,$x+($(($newx-$x))*(sqrt((t/4)-$i)*(sin(((t/4)-$i)*PI/2))))\,$filterx)"
-	filtery="if(gt(t/4\,$i)\,$y+($(($newy-$y))*(sqrt((t/4)-$i)*(sin(((t/4)-$i)*PI/2))))\,$filtery)"
-	x=$newx
-	y=$newy
+	xspeed=$(echo $speedmult $(echo $(($newx-$x)) | tr -d -) | awk '{ print $2 / $1 }')
+	yspeed=$(echo $speedmult $(echo $(($newy-$y)) | tr -d -) | awk '{ print $2 / $1 }')
+	pspeed=$(echo $xspeed $yspeed | awk '{ print ($1>$2)?$1:$2 }')
+
+	p="$x"
+	newp="$newx"
+	filterp="$filterx"
+	generate_glide
+	filterx="$filterp"
+
+	p="$y"
+	newp="$newy"
+	filterp="$filtery"
+	generate_glide
+	filtery="$filterp"
+
+	if [ "$full_length_equ" == "true" ]; then
+		newx=80
+		newy=80
+		i=$(echo $i $pspeed | awk '{ print $1 + ( $2 * 2 ) }')
+	else
+		x=$newx
+		y=$newy
+		i=$(echo $i $pspeed | awk '{ print $1 + $2 }')
+	fi
 done
+
 visualizer_start=$(echo "$audio_speed" | awk '{ print $1 * 20 }')
 visualizer_end=$(echo "$audio_speed" | awk '{ print $1 * '$visualizer_max_freq' }')
 font_size=$(echo "$video_font_multiplier" | awk '{print int(($1 * 80)+0.5) }')
