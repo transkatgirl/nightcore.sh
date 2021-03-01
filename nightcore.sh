@@ -7,7 +7,7 @@
 
 # Directory that the script uses to store temporary files. If you need to run multiple instances of the script, this must be different for every instance.
 # This directory is cleaned out every time the script starts (or created if it does not exist), and removed after the script sucessfully completes.
-export temporary_directory="/tmp/nightcore.sh"
+export temporary_directory="/tmp/nightcore.sh.$(date +"%s")_$RANDOM"
 
 # Change the colors used for text. The first option affects the text itself, the second option affects the overlay box. Set the second option to "#00000000" to disable rendering the overlay box.
 export text_color="#ffffff"
@@ -81,13 +81,13 @@ afiletypes=( "input.flac" "input.wv" "input.tta" "input.ddf" "input.dsf" "input.
 vfiletypes=( "input.png" "input.tiff" "input.tif" "input.pam" "input.pnm" "input.ppm" "input.pgm" "input.pbm" "input.bmp" "input.dib" "input.psd" "input.apng" "input.exr" "input.webp" "input.jp2" "input.jpg" "input.jpeg" "input.jpe" "input.jfi" "input.jfif" "input.jif" "input.gif" "input.mkv" )
 sfiletypes=( "input.vtt" "input.srt" "input.ssa" "input.ass" "input.lrc" )
 script_dir="$(dirname "$0")"
-set -euo pipefail
+set -Eeuo pipefail
 
 if [[ ! (`command -v sox` && `command -v soxi` && `command -v ffmpeg` && `command -v ffprobe` && `command -v magick` && `command -v waifu2x-converter-cpp`) ]]; then
 	echo "Please install the required dependencies before attempting to run the script."
 	exit
 fi
-if [ `command -v npm` ] && [ `command -v node` ] && [ ! -d "$script_dir/subtitles/node_modules" ]; then
+if [ `command -v npm` ] && [ `command -v node` ] && [ -d "$script_dir/subtitles" ] && [ ! -d "$script_dir/subtitles/node_modules" ]; then
 	npm install --prefix "$script_dir/subtitles"
 fi
 
@@ -101,6 +101,14 @@ audio_speed="$(cat "speed.txt")"
 tmpdir="$temporary_directory"
 rm -rf "$tmpdir"
 mkdir -p "$tmpdir"
+
+trap ctrl_c INT
+trap ctrl_c ERR
+
+function ctrl_c() {
+	echo "Exit signal detected, stopping and cleaning up..."
+        rm -rf "$tmpdir"
+}
 
 echo "Note: Image and audio processing is multi-threaded, so the last console log message may not be the active processing step."
 
@@ -254,8 +262,8 @@ function process_image {
 		font_alt_x="$((1280-($padding*3)))-text_w"
 	fi
 	if [ -s "$audio_title_short" ]; then
-		ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$(cat "$audio_title_short")':x=$font_x:y=$(($padding*3)):alpha=0.8"
-		if [ ! $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
+		ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:textfile='$audio_title_short':x=$font_x:y=$(($padding*3)):alpha=0.8:line_spacing=-$font_size"
+		if [ $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -ne 100 ]; then
 			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='[${audio_speed}x speed]':x=$font_x:y=$((($padding*6)+$font_size)):alpha=$thumbnail_overlay_alpha"
 		fi
 		if [ -n "$info_text_short" ]; then
@@ -419,14 +427,14 @@ else
 	font_x="$(($padding*3))"
 fi
 if [ -s "$audio_title" ]; then
-	if [ $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -eq 100 ]; then
-		rtext="$(cat $audio_title)"
-	elif [ "$video_font_align" == "right" ]; then
-		rtext="$(cat $audio_title) [${audio_speed}x speed]"
-	else
-		rtext="[${audio_speed}x speed] $(cat $audio_title)"
+	if [ $(echo $audio_speed | awk '{ print int(($1 * 100)+0.5) }' ) -ne 100 ]; then
+		if [ "$video_font_align" == "right" ]; then
+			echo "$(cat $audio_title) [${audio_speed}x speed]" > $audio_title
+		else
+			echo "[${audio_speed}x speed] $(cat $audio_title)" > $audio_title
+		fi
 	fi
-	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:text='$rtext':x=$font_x:y=$(($padding*3)):alpha=$video_overlay_alpha"
+	atext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$font_size:textfile='$audio_title':x=$font_x:y=$(($padding*3)):alpha=$video_overlay_alpha:line_spacing=-$font_size"
 	if [ -n "$info_text" ]; then
 		atext="$atext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$info_text':x=$font_x:y=$((($padding*6)+$font_size)):alpha=$video_overlay_alpha"
 	fi
