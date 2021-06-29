@@ -16,6 +16,9 @@ export text_overlay_color="#000000"
 # Change the color used for the audio visualizer.
 export visualizer_overlay_color="#000000"
 
+# Change the background color used for transparent images.
+export alpha_background_color="#c2c2c2"
+
 # Change the fontconfig settings used to draw text. Colons must be escaped.
 export fontconfig='family=sans-serif\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true'
 
@@ -204,7 +207,7 @@ image_output_thumbnail="output.thumbnail.png"
 function process_image {
 	touch "$image_begin"
 	echo "Processing image..."
-	ffmpeg $ffloglevelstr -i "$1" -an -vframes 1 -map_metadata -1 -vcodec png -sws_flags +accurate_rnd+full_chroma_int -f image2pipe - | magick - -background white -alpha remove -alpha off -fuzz 1% -trim "$image_stage1"
+	ffmpeg $ffloglevelstr -i "$1" -an -vframes 1 -map_metadata -1 -vcodec png -sws_flags +accurate_rnd+full_chroma_int -f image2pipe - | magick - -background "$alpha_background_color" -alpha remove -alpha off -fuzz 1% -trim "$image_stage1"
 
 	width="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage1")"
 	width_scale="$(echo "$width" | awk '{ print int((4000/$1)+0.99999) }')"
