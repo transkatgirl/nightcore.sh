@@ -202,16 +202,27 @@ image_stage1="$tmpdir/stage1.ppm"
 image_stage2="$tmpdir/stage2.ppm"
 image_stage3="$tmpdir/stage3.ppm"
 image_stage4="$tmpdir/stage4.ppm"
+image_stage5="$tmpdir/stage5.ppm"
 image_output="$tmpdir/output.ppm"
 image_output_thumbnail="output.thumbnail.png"
 function process_image {
 	touch "$image_begin"
 	echo "Processing image..."
-	ffmpeg $ffloglevelstr -i "$1" -an -vframes 1 -map_metadata -1 -vcodec png -sws_flags +accurate_rnd+full_chroma_int -f image2pipe - | magick - -background "$alpha_background_color" -alpha remove -alpha off -fuzz 1% -trim "$image_stage1"
+	ffmpeg $ffloglevelstr -i "$1" -an -vframes 1 -map_metadata -1 -vcodec png -sws_flags +accurate_rnd+full_chroma_int -f image2pipe - | magick - -background "$alpha_background_color" -alpha remove -alpha off "$image_stage1"
 
-	width="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage1")"
+	min_width="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage1" | awk '{ print int($1*0.87) }')"
+	min_height="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height "$image_stage1" | awk '{ print int($1*0.87) }')"
+
+	magick "$image_stage1" -fuzz 1% -define trim:percent-background=95% -trim +repage "$image_stage2"
+	if [ "$min_width" -ge "$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage2")" ] || [ "$min_height" -ge "$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height "$image_stage2")" ]; then
+		mv "$image_stage1" "$image_stage2"
+	else
+		rm "$image_stage1"
+	fi
+
+	width="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage2")"
 	width_scale="$(echo "$width" | awk '{ print int((4000/$1)+0.99999) }')"
-	height="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height "$image_stage1")"
+	height="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height "$image_stage2")"
 	height_scale="$(echo "$height" | awk '{ print int((2320/$1)+0.99999) }')"
 	if [ "$width_scale" -ge "$height_scale" ]; then
 		w2x_scale="$width_scale"
@@ -229,10 +240,10 @@ function process_image {
 	fi
 	if [ "$w2x_scale" -gt 1 ]; then
 		echo "Upscaling and denoising image..."
-		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $w2x_denoise -i "$image_stage1" -o "$image_stage2"
-		rm "$image_stage1"
+		waifu2x-converter-cpp $w2loglevelstr -m noise-scale --scale-ratio $w2x_scale --noise-level $w2x_denoise -i "$image_stage2" -o "$image_stage3"
+		rm "$image_stage2"
 	else
-		mv "$image_stage1" "$image_stage2"
+		mv "$image_stage2" "$image_stage3"
 	fi
 
 	echo "Cropping image..."
@@ -241,12 +252,12 @@ function process_image {
 	else
 		gravity="North"
 	fi
-	magick "$image_stage2" -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage "$image_output"
+	magick "$image_stage3" -filter Lanczos -resize 4000x2320^ -gravity $gravity -crop 4000x2320+0+0 +repage "$image_output"
 
 	echo "Generating thumbnail..."
 
-	rm "$image_stage2"
-	magick "$image_output" -gravity Center -crop 3840x2160+0+0 -filter Lanczos -resize 1280x720 "$image_stage3"
+	rm "$image_stage3"
+	magick "$image_output" -gravity Center -crop 3840x2160+0+0 +repage -filter Lanczos -resize 1280x720 "$image_stage4"
 
 	while [[ ! -f "$audio_output" ]]; do
 		sleep 0.1
@@ -272,19 +283,19 @@ function process_image {
 		if [ -n "$info_text_short" ]; then
 			ttext="$ttext,drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$info_text_short':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
 		fi
-		ffmpeg $ffloglevelstr -i "$image_stage3" -vf "$ttext" "$image_stage4"
+		ffmpeg $ffloglevelstr -i "$image_stage4" -vf "$ttext" "$image_stage5"
 	else
 		if [ -n "$info_text_short" ]; then
 			ttext="drawtext=box=1:boxcolor=$text_overlay_color:boxborderw=$padding:fontcolor=$text_color:fontfile=\'$fontconfig\':fontsize=$info_font_size:text='$info_text_short':x=$font_alt_x:y=$((720-($padding*3)))-text_h:alpha=$thumbnail_overlay_alpha"
-			ffmpeg $ffloglevelstr -i "$image_stage3" -vf "$ttext" "$image_stage4"
+			ffmpeg $ffloglevelstr -i "$image_stage4" -vf "$ttext" "$image_stage5"
 		else
-			cp "$image_stage3" "$image_stage4"
+			cp "$image_stage4" "$image_stage5"
 		fi
 	fi
-	rm "$image_stage3"
-
-	convert "$image_stage4" -quality 100 "$image_output_thumbnail"
 	rm "$image_stage4"
+
+	convert "$image_stage5" -quality 100 "$image_output_thumbnail"
+	rm "$image_stage5"
 
 	if [ `command -v metaflac` ]; then
 		while [[ ! -f "$filtergraph_end" ]]; do
