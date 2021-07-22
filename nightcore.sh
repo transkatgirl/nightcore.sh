@@ -213,7 +213,7 @@ function process_image {
 	min_width="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage1" | awk '{ print int($1*0.87) }')"
 	min_height="$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height "$image_stage1" | awk '{ print int($1*0.87) }')"
 
-	magick "$image_stage1" -fuzz 1% -define trim:percent-background=95% -trim +repage "$image_stage2"
+	magick "$image_stage1" -fuzz 2.5% -define trim:percent-background=95% -trim +repage "$image_stage2"
 	if [ "$min_width" -ge "$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=width "$image_stage2")" ] || [ "$min_height" -ge "$(ffprobe $fploglevelstr -select_streams v:0 -show_entries stream=height "$image_stage2")" ]; then
 		mv "$image_stage1" "$image_stage2"
 	else
