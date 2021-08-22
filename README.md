@@ -1,74 +1,128 @@
-# Nightcore.sh
-A Bash script that allows you to easily create "Nightcore" versions of songs.
+# nightcore.sh
+A Bash script that automates the process of creating "Nightcore" videos for songs.
+
+**Note: The nightcore.sh project was rewritten on August 22, 2021, introducing some breaking changes. Please read the below section if you have been using nightcore.sh prior to this date.**
+
+## Migration from nightcore.sh v1 to v2
+During the time period of July - August 2021, I decided it was worth undertaking the project of rewriting the entirety of nightcore.sh. The code had become a spagetti mess over the nearly 2 years it's been since the project started, and this was making it extremely difficult to implement new features or even just improve existing code.
+
+Although the rewrite focused on keeping the number of breaking changes low, there were breaking changes introduced whenever it was a net benefit to the overall project. This allowed for a huge overall improvement to the code, and the new version of nightcore.sh is a drastic improvement from the old codebase in almost every way.
+
+However, this did introduce a large number of breaking changes, which users coming from older versions of the program will have to deal with. A mostly complete list of all breaking changes (this is not a changelog) is listed below:
+- cli
+  - unlike the previous version of nightcore.sh, which started rendering in the current directory and didn't take any cli arguments, the new version has a proper cli interface, requiring at least 1 argument (an action) to be specified. if you would like to replicate the old behavior, change `sh nightcore.sh` to `sh nightcore.sh render`
+  - the log messages & error handling have changed significantly during the rewrite.
+- input files
+  - the configuration file (options.sh) has been drastically changed. most config options are no longer necessary and have been removed. the following config options remain:
+    - `video_font_align` - no change to functionality
+    - `thumbnail_font_align` - no change to functionality
+    - `visualizer_overlay_color` -> `visualizer_color` - no change besides rename
+  - the configuration file is run in a vastly different fashion to how it used to be run (only once at the beginning of the script).
+  - the default configuration is no longer editable by modifying the `nightcore.sh` file.
+  - the text font is now bundled with nightcore.sh, instead of relying on system fonts.
+  - processing of input text files (such as `speed.txt` or `title.txt`), along with metadata parsing, has been significantly improved
+  - the `info_short.txt` file is now ignored.
+  - the default info string is different
+  - lrc file parsing has been vastly improved
+  - song titles are now required instead of optional
+  - speed multipliers of 1.0 will be displayed (this may change in a future version)
+- processing chain
+  - the temporary directory format has changed, and temporary directories are more reliably cleaned up
+  - temporary files have completely different names in most cases
+  - waifu2x is no longer a strict dependency
+  - node.js is no longer a dependency, python is used for subtitle processing instead
+  - mkvtoolnix is no longer a dependency
+  - flac is no longer a dependency
+  - pngcrush is no longer a dependency
+  - the multi-threading has been vastly improved and is no longer susceptible to most of the issues the older versions experienced.
+  - the processing chains for all file types have been completely overhauled and are only vaguely similar to the original code
+  - sox and imagemagick are used less internally, more of the program is handled by ffmpeg now
+  - automatic cropping happens earlier in the image processing chain
+- output files
+  - only a single output file (audio+video+thumbnail+subtitles+metadata) is created now. if you would like to split this into multiple output files, run `sh nightcore.sh split` to do so. all output filenames are unchanged.
+  - thumbnail resoultion has been increased to 3840x2160 (same as video)
+
+If an important change is not listed here, please file an issue, and I'll add it to the list.
+This notice will be removed after a month to improve the readme's readability.
 
 ## Features
-- Creates visual effects (a gliding background and audio visualizer) using only FFMPEG.
-- Applies advanced input filtering, to fix common issues (noisy images, unnecessary silence, black bars in images, slight audio clipping, volume differences between songs) that would usually require manual editing.
-- Designed to work with lossless files, by using lossless encoding in all processing steps.
-- Preserves audio quality whenever possible by avoiding resampling, using lossless formats and using the high quality SoX resampler whenever resampling is absoutely required.
-- Preserves video quality whenever possible by using lossless formats and avoiding RGB to YUV conversion.
-- Offers lossless 4k60fps output at reasonable filesizes (usually under 1GB).
+- Renders high-quality visual effects (a gliding background, text overlay, and audio visualizer) without need for user configuration
+- Uses advanced pre-processing to automatically fix commmon issues (unnecessary audio silence, black bars in images, slight audio clipping, volume differences between songs) that would typically require manual editing
+- Has a high-quality lossless media processing pipeline to preserve image and video quality whenever possible
+- Offers 4k60 lossless, single-file (video+audio+thumbnail+subtitle) outputs at reasonable filesizes
+- Comes with a suite of cli tools to manipulate output files (splitting into multiple files, compression, etc)
+
+## System requirements
+Note: It may be possible to run the script on hardware that doesn't meet these requirements, but you will likely encounter issues.
+- A Linux-based operating system with GNU Coreutils.
+- 6+ GB of available system RAM. More is better (especially with ESRGAN).
+- A fairly powerful CPU, weak CPUs will be unable to play the rendered video in real-time. Faster is better.
+- Enough available storage for storing all the dependencies and your rendered videos (expect ~1GB per video).
 
 ## Dependencies
+
 ### Required
-- GNU Coreutils, Bash (for running the script)
-- FFMPEG (for encoding the video)
-- ImageMagick (for encoding the image)
-- SoX (for encoding the audio)
-- Waifu2xcpp (for AI image upscaling and noise removal)
-### Optional
-- MKVToolNix (for embedding thumbnail into video)
-- pngcrush (for further compressing thumbnail)
-- FLAC (for further compressing audio and embedding thumbnail into audio)
-- NPM, NodeJS (for parsing and processing subtitles)
+- FFMPEG
+- ImageMagick
+- SoX
+
+### Optional (but highly recommended)
+
+#### Version information
+- Git
+
+#### Subtitle processing
+- Python3
+- srt (`pip install srt`)
+
+#### Ultra-high-quality ESRGAN upscaler
+Note: This can take upwards of 30 minutes to upscale a *single image* on a fairly decent CPU. Uses the [YandeRe ESRGAN model](https://nmkd.de/?esrgan-list).
+- Python3
+- [PyTorch](https://pytorch.org/get-started/locally/)
+- NumPy (`pip install numpy`)
+- OpenCV (`pip install opencv-python`)
+
+#### High-quality upscaler
+Delivers fairly meh quality. Much better than typical upscalers (such as Lanczos), but much worse than ESRGAN.
+
+Roughly 10x faster than ESRGAN. If you care more about speed than quality, use this.
+
+Note: If all the ESRGAN dependencies are installed, it will be prefered over this upscaler.
+- waifu2x-converter-cpp
+
+## Installation
+Once all dependencies are installed, open a terminal in the directory you wish to install the script into, and run the following commands:
+```bash
+git clone https://github.com/katattakd/nightcore.shv2.git
+git submodule update --init --recursive
+```
 
 ## Usage
-Once dependencies are installed, download the script to your computer. Then, open the script in a text editor, and adjust the built-in configuration options as you see fit. If you don't know what to set an option to, leaving it at the default value is usually a good idea.
+Run `sh nightcore.sh help_full` for usage information.
 
-Once the script is configured, name your input files `input.(audio format)` and `input.(image format)`, and create a `speed.txt` file with a numeric speed multiplier (like `1.2`). Then run the script in a terminal using this command: `bash nightcore.sh`.
+## Sharing output videos
+The output file generated by the script's renders (`output.mkv`) is not suitable for sharing. It's huge (typically ~1GB), very high-resoultion, only has a single keyframe (so seeking isn't possible), has an embedded high-resoultion image, uses lossless codecs not supported by most video players (lossless sRGB H.264 video + FLAC audio), and uses a container format that isn't widely supported (Makroska).
 
-When running the script, please make sure you have at least 6GB of available system RAM.
-Useful speed multipliers range from 1.1 to 1.3, different songs will likely need to be set to different speeds.
+As a result of this, you *will* have to re-encode the output file before you can share it (unless you're trying to share a lossless copy of the rendered video, or you're uploading to a streaming site, such as YouTube, which will re-encode the video for you). There are multiple ways to go about doing this.
 
-### Output
-The script will typically output 3-4 files: output.mkv (generated video), output.flac (generated audio), output.thumbnail.png (generated thumbnail image), and output.srt (generated subtitle file, optional). If you are planning on uploading your video to a video sharing service, upload these files, and avoid doing any format conversions to the video and thumbnail files if possible (re-encoding will result in a significant quality loss).
+The easiest way to do so is by using the script's built-in video compression tool. Simply run `sh nightcore.sh compress [optional input directory]`, and it will make a compressed version of the output.mkv file called compressed.webm. This does everything right, and results in a high-quality video that you can share with most of your friends.
 
-If you would like a smaller video file to share directly, run `sh compress.sh` in the same folder as the video file. This will create a far smaller compressed version of the video, which can be uploaded to file sharing sites and streamed directly. Do not upload the compressed video to video sharing sites like YouTube.
+But, there are some caveats to this:
+- It's slow. Expect it to take a slighly longer to compress than it took to render the video.
+- You're stuck with specific codecs (yuv444p vp9 + opus + webvtt), a specific resoultion (1080p60), and specific bitrates. If you need wider software support, a higher quality, or a smaller filesize, you'll have to do something else.
 
-### Special files
-Different input files can be used to affect the functionality of nightcore.sh. A list of all files nightcore.sh can use is below.
-- \[required\] input.(audio format) - Audio that will be processed and used as the video's music.
-  - Should not be longer than 6 minutes.
-  - Metadata will be removed from the audio file during processing.
-- \[required\] input.(image format) - Image that will be processed and used as the video's background.
-  - If the file is animated, only the first frame of the animation will be used.
-  - If the file is transparent, transparency will be replaced with solid white.
-  - If the file is not 16:9, it will be cropped automatically. The automatic cropping is not perfect, and some files may need to be manually cropped instead.
-- \[required\] speed.txt - Speed multiplier to speed up/slow down audio by.
-  - Must not contain any whitespace.
-  - Must be non-empty and a valid number.
-- input.(subtitle format) - Subtitles that will be processed and used as the video's lyrics.
-  - Subtitles should match the original song's speed, as they will be sped up by the script.
-  - Metadata will be removed from the subtitle file during processing.
-- title.txt - Song info displayed in the video (Artist - Title).
-  - If missing, it will be automatically generated from file metadata.
-  - If empty, song title will not be displayed in the video.
-  - Should not contain any newlines.
-- title_short.txt - Song info displayed in the thumbnail (Artist - Title).
-  - If missing, it will be automatically generated from title.txt.
-  - If empty, song title will not be displayed in the thumbnail.
-  - Should not contain any newlines.
-- info.txt - Additional info displayed in the video.
-  - If missing, it will be automatically generated as "nightcore.sh commit $(git rev-parse --short HEAD)".
-  - If empty, additional info will not be displayed in the video.
-  - Should not contain any newlines.
-- info_short.txt - Additional info displayed in the thumbnail.
-  - If missing, it will be a copy of info.txt.
-  - If empty, additional info will not be displayed in the thumbnail.
-  - Should not contain any newlines.
-- options.sh - Nightcore.sh configuration file.
-  - Follow same format as built-in options in script.
-  - Overrides options specified in script.
+As a result of this, you'll likely need to manually compress the output video yourself at some point. Even if uploading to a streaming site / using the built-in tool works fine for now, you may run into a situation in the future when it doesn't.
 
-## Demos
-Want to see what this script is capable of? Demo videos can be found on [my YouTube channel](https://www.youtube.com/channel/UCbgvvnk-Tb_ixyj7UDWnXaQ).
+Here's some guidelines, tips, and potential pitfalls to keep in mind (assuming you know some basic media encoding stuff):
+- The renders are sRGB, and many tools ([such as FFMPEG](https://medium.com/invideo-io/talking-about-colorspaces-and-ffmpeg-f6d0b037cc2f) / anything FFMPEG based) mess up sRGB -> YUV conversion. *Make sure* that the compressed video is using the bt.709 colorspace.
+  - The `src/modes/compress.sh` file may be a useful reference on how to perform sRGB -> YUV conversion correctly with FFMPEG.
+- Make sure to strip out the attached image & metadata while re-encoding.
+  - The `src/modes/compress.sh` file may be a useful reference on how to do this.
+- If you're working with low bitrates (below 1mbit/s), give most of the bitrate to the audio stream. Bad quality audio is much more noticeable than bad quality video, especially when the audio is the main focus and the video is just eyecandy.
+  - If you're working with *very low* bitrates, you may be better off sending an audio-only file. Decent audio + no video is far better than bad audio + terrible video.
+- If you're uploading to a service which is going to be re-encoding the content (like a streaming site or social media), use lossless codecs if you can, and the highest bitrates possible if you can't.
+- Use modern codecs if possible (especially when it comes to the audio), as they'll allow you to get much better quality at the same bitrate.
+- Use yuv444p instead of yuv420p if possible. There may be a fairly noticeable difference in visual quality, *especially at lower resoultions*.
+- Use 60fps if possible, even if it requires lowering the quality a bit more. The music visualizer benefits a lot from framerates >30fps.
+- If filesize/bitrate isn't a huge concern, target a quantizer value (crf) instead of a bitrate. This will allow for more consistent quality between videos.
+  - For audio: If lossless isn't an option, use a vbr setting.
