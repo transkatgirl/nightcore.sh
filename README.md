@@ -1,50 +1,6 @@
 # nightcore.sh
 A Bash script that automates the process of creating "Nightcore" videos for songs.
 
-**Note: The nightcore.sh project was rewritten on August 22, 2021, introducing some breaking changes. Please read the below section if you have been using nightcore.sh prior to this date.**
-
-## Migration from nightcore.sh v1 to v2
-During the time period of July - August 2021, I decided it was worth undertaking the project of rewriting the entirety of nightcore.sh. The code had become a spagetti mess over the nearly 2 years it's been since the project started, and this was making it extremely difficult to implement new features or even just improve existing code.
-
-Although the rewrite focused on keeping the number of breaking changes low, there were breaking changes introduced whenever it was a net benefit to the overall project. This allowed for a huge overall improvement to the code, and the new version of nightcore.sh is a drastic improvement from the old codebase in almost every way.
-
-However, this did introduce a large number of breaking changes, which users coming from older versions of the program will have to deal with. A mostly complete list of all breaking changes (this is not a changelog) is listed below:
-- cli
-  - unlike the previous version of nightcore.sh, which started rendering in the current directory and didn't take any cli arguments, the new version has a proper cli interface, requiring at least 1 argument (an action) to be specified. if you would like to replicate the old behavior, change `sh nightcore.sh` to `sh nightcore.sh render`
-  - the log messages & error handling have changed significantly during the rewrite.
-- input files
-  - the configuration file (options.sh) has been drastically changed. most config options are no longer necessary and have been removed. the following config options remain:
-    - `video_font_align` - no change to functionality
-    - `thumbnail_font_align` - no change to functionality
-    - `visualizer_overlay_color` -> `visualizer_color` - no change besides rename
-  - the configuration file is run in a vastly different fashion to how it used to be run (only once at the beginning of the script).
-  - the default configuration is no longer editable by modifying the `nightcore.sh` file.
-  - the text font is now bundled with nightcore.sh, instead of relying on system fonts.
-  - processing of input text files (such as `speed.txt` or `title.txt`), along with metadata parsing, has been significantly improved
-  - the `info_short.txt` file is now ignored.
-  - the default info string is different
-  - lrc file parsing has been vastly improved
-  - song titles are now required instead of optional
-  - speed multipliers of 1.0 will be displayed (this may change in a future version)
-- processing chain
-  - the temporary directory format has changed, and temporary directories are more reliably cleaned up
-  - temporary files have completely different names in most cases
-  - waifu2x is no longer a strict dependency
-  - node.js is no longer a dependency, python is used for subtitle processing instead
-  - mkvtoolnix is no longer a dependency
-  - flac is no longer a dependency
-  - pngcrush is no longer a dependency
-  - the multi-threading has been vastly improved and is no longer susceptible to most of the issues the older versions experienced.
-  - the processing chains for all file types have been completely overhauled and are only vaguely similar to the original code
-  - sox and imagemagick are used less internally, more of the program is handled by ffmpeg now
-  - automatic cropping happens earlier in the image processing chain
-- output files
-  - only a single output file (audio+video+thumbnail+subtitles+metadata) is created now. if you would like to split this into multiple output files, run `sh nightcore.sh split` to do so. all output filenames are unchanged.
-  - thumbnail resoultion has been increased to 3840x2160 (same as video)
-
-If an important change is not listed here, please file an issue, and I'll add it to the list.
-This notice will be removed after a month to improve the readme's readability.
-
 ## Features
 - Renders high-quality visual effects (a gliding background, text overlay, and audio visualizer) without need for user configuration
 - Uses advanced pre-processing to automatically fix commmon issues (unnecessary audio silence, black bars in images, slight audio clipping, volume differences between songs) that would typically require manual editing
@@ -98,7 +54,24 @@ git submodule update --init --recursive
 ```
 
 ## Usage
-Run `sh nightcore.sh help_full` for usage information.
+Run `sh nightcore.sh help_full` for detailed usage information, or `sh nightcore.sh` for an overview of script usage (shown below):
+
+```
+Usage: sh nightcore.sh [mode] [input directory]
+
+Available modes:
+
+- render - use the files present in the directory to render a nightcore video
+- split - split the script's output file into multiple files
+- compress - create a compressed version of the script's output file for sharing
+- expand - remove compressed version of output file
+- combine - remove all files split from the output file
+- clean - remove all files produced by nightcore.sh from the directory
+- help - show this menu
+- help_full - show a more detailed version of this menu
+
+Use the help_full mode for more info.
+```
 
 ## Sharing output videos
 The output file generated by the script's renders (`output.mkv`) is not suitable for sharing. It's huge (typically ~1GB), very high-resoultion, only has a single keyframe (so seeking isn't possible), has an embedded high-resoultion image, uses lossless codecs not supported by most video players (lossless sRGB H.264 video + FLAC audio), and uses a container format that isn't widely supported (Makroska).

@@ -29,6 +29,15 @@ output_height=2160
 # We go with 60hz, because the vast majority of displays are either 60hz or a multiple of it (120hz, 30hz, etc).
 output_framerate=60
 
+# This sets the target (in LUFS) used for the volume normalization.
+# Warning: Setting this too high can cause the audio processing step to fail!
+# Common LUFS targets:
+# -11 LUFS = Amazon Music
+# -14 LUFS = Spotify, YouTube
+# -16 LUFS = Apple Music
+# -24 LUFS = EBU R128 target
+loudness_target_lufs=-16
+
 # Glide area calculations
 
 glide_margin=$(($output_width/48))
