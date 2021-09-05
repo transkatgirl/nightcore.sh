@@ -20,7 +20,7 @@ count=`echo 3 $height | awk '{ print ($1 * $2)/120 }'`:\
 basefreq=$basefreq:endfreq=$endfreq:\
 cscheme=0.2|0.2|0.2|0.2|0.2|0.2"
 
-echo "volume=5dB,$visualizer,\
+echo "volume=6dB,$visualizer,\
 setsar=0,format=rgba,\
 colorkey=black:0.01:0,\
 lut=c0=$vr:c1=$vg:c2=$vb:c3=if(val\,194\,0),\
