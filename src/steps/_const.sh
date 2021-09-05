@@ -8,8 +8,8 @@ alias sox="sox -V1"
 
 # Input media format list
 
-audio_ext=( "flac" "wv" "tta" "ddf" "dsf" "wav" "wave" "caf" "mka" "opus" "ogg" "oga" "vorbis" "spx" "m4a" "m4b" "m4r" "mp3" "bit" )
-image_ext=( "png" "tiff" "tif" "pam" "pnm" "ppm" "pgm" "pbm" "bmp" "dib" "psd" "apng" "exr" "webp" "jp2" "jpg" "jpeg" "jpe" "jfi" "jfif" "jif" "gif" "mkv" )
+audio_ext=( "flac" "wav" "wv" "tta" "ddf" "dsf" "wave" "caf" "mka" "opus" "ogg" "oga" "vorbis" "spx" "m4a" "m4b" "m4r" "mp3" "bit" )
+image_ext=( "ppm" "png" "tiff" "tif" "pam" "pnm" "pgm" "pbm" "bmp" "dib" "psd" "apng" "exr" "webp" "jp2" "jpg" "jpeg" "jpe" "jfi" "jfif" "jif" "gif" "mkv" )
 lyric_ext=( "vtt" "srt" "ssa" "ass" "lrc" )
 
 # Output media format settings
