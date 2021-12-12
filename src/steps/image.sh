@@ -36,7 +36,7 @@ else
 	export scale="$height_scale"
 fi
 
-if [[ (`command -v pip` && `command -v python3` ) ]] && python -c "import torch" &>/dev/null && python -c "import numpy" &>/dev/null && python -c "import cv2" &>/dev/null; then
+if [[ ( `command -v python3` ) ]] && python3 -c "import torch" &>/dev/null && python3 -c "import numpy" &>/dev/null && python3 -c "import cv2" &>/dev/null; then
 	scaler="esrgan"
 elif [[ (`command -v waifu2x-converter-cpp` ) ]]; then
 	scaler="waifu2x"
