@@ -3,14 +3,14 @@ A Bash script that automates the process of creating "Nightcore" videos for song
 
 ## Features
 - Renders high-quality visual effects (a gliding background, text overlay, and audio visualizer) without need for user configuration
-- Uses advanced pre-processing to automatically fix commmon issues (unnecessary audio silence, black bars in images, slight audio clipping, volume differences between songs) that would typically require manual editing
+- Uses advanced pre-processing to automatically fix common issues (unnecessary audio silence, black bars in images, slight audio clipping, volume differences between songs) that would typically require manual editing
 - Has a high-quality lossless media processing pipeline to preserve image and video quality whenever possible
 - Offers 4k60 lossless, single-file (video+audio+thumbnail+subtitle) outputs at reasonable filesizes
 - Comes with a suite of cli tools to manipulate output files (splitting into multiple files, compression, etc)
 
 ## System requirements
 Note: It may be possible to run the script on hardware that doesn't meet these requirements, but you will likely encounter issues.
-- A Unix-based operating system.
+- A Linux-based operating system.
 - 6+ GB of available system RAM. More is better (especially with ESRGAN).
 - A fairly powerful CPU, weak CPUs will be unable to play the rendered video in real-time. Faster is better.
 - Enough available storage for storing all the dependencies and your rendered videos (expect ~1GB per video).

@@ -65,7 +65,7 @@ alias remove_featuring="sed 's/Featuring.*//'"
 
 # Fontconfig configuration
 
-fontconfig="$tmpdir/font.ttf\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true"
+fontconfig="$tmpdir/font.ttf\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true\:embolden=false"
 
 # Font configuration tools
 
