@@ -10,7 +10,7 @@ A Bash script that automates the process of creating "Nightcore" videos for song
 
 ## System requirements
 Note: It may be possible to run the script on hardware that doesn't meet these requirements, but you will likely encounter issues.
-- A Linux-based operating system.
+- A Unix-based operating system.
 - 6+ GB of available system RAM. More is better (especially with ESRGAN).
 - A fairly powerful CPU, weak CPUs will be unable to play the rendered video in real-time. Faster is better.
 - Enough available storage for storing all the dependencies and your rendered videos (expect ~1GB per video).

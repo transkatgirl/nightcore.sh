@@ -101,3 +101,4 @@ else
 fi
 
 cp "$script_dir/steps/dependencies/fonts/NotoSans-Light.ttf" "$tmpdir/font.ttf"
+cp "$script_dir/steps/dependencies/fonts/fonts.conf" "$tmpdir/fonts.conf"

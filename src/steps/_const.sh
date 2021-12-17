@@ -2,7 +2,7 @@ set -euo pipefail
 
 # Command abbreviations
 
-alias ffmpeg="ffmpeg -loglevel error"
+alias ffmpeg="FONTCONFIG_FILE=$TMPDIR/fonts.conf ffmpeg -loglevel error"
 alias ffprobe="ffprobe -loglevel error -of csv=p=0"
 alias sox="sox -V1"
 
@@ -63,10 +63,6 @@ alias remove_ampersand="sed 's/&.*//' | sed -e 's/^[[:space:]]*//' -e 's/[[:spac
 alias remove_parenthesis="sed 's/([^)]*)//g;s/  / /g'"
 alias remove_featuring="sed 's/Featuring.*//'"
 
-# Fontconfig configuration
-
-fontconfig="$tmpdir/font.ttf\:weight=50\:antialias=true\:hinting=false\:lcdfilter=0\:minspace=true\:embolden=false"
-
 # Font configuration tools
 
 calculate_sizes() {
@@ -85,5 +81,5 @@ calculate_sizes() {
 		font_alt_x="$(($output_width-($padding*3)))-text_w"
 	fi
 
-	drawtext="drawtext=box=1:boxcolor=#000000:boxborderw=$padding:fontcolor=#ffffff:fontfile=\'$fontconfig\':alpha=0.76"
+	drawtext="drawtext=box=1:boxcolor=#000000:boxborderw=$padding:fontcolor=#ffffff:fontfile=\'$tmpdir/font.ttf\':alpha=0.76"
 }
