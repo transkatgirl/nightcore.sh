@@ -1,5 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
 
 magick "$1" -fuzz 2.5% -define trim:percent-background=95% -trim +repage "$tmpdir/stage1.ppm"
 
@@ -54,7 +53,7 @@ elif [ "$scale" -gt 1 ]; then
 
 	echo "Processing image..."
 
-	sh "$script_dir/steps/dependencies/run_${scaler}.sh"
+	source "$script_dir/steps/dependencies/run_${scaler}.sh"
 
 	magick "$tmpdir/${scaler}_output.png" -filter Lanczos -resize "${padded_width}x${padded_height}^" -gravity $gravity -crop "${padded_width}x${padded_height}+0+0" +repage "$2"
 	rm "$tmpdir/${scaler}_output.png"

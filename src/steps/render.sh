@@ -1,5 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
 
 text=`cat "$tmpdir/filtergraph_text.txt"`
 glide=`cat "$tmpdir/filtergraph_glide.txt"`

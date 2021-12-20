@@ -1,5 +1,4 @@
 set -euo pipefail
-source "$tmpdir/prefs.sh"
 
 model="4x_NMKD-Yandere2_255000_G"
 

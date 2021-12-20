@@ -1,6 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
-source "$tmpdir/prefs.sh"
 
 font_multiplier=1.87
 info_multiplier=0.7

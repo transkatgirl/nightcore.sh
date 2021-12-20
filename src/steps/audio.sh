@@ -1,5 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
 
 echo "Processing audio..."
 

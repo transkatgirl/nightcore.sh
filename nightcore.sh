@@ -19,7 +19,7 @@ FFMPEG, SoX, and ImageMagick must be installed for the script to function proper
 fi
 
 if [ -s "$script_dir/modes/$mode.sh" ]; then
-	sh "$script_dir/modes/$mode.sh"
+	source "$script_dir/modes/$mode.sh"
 else
 	echo "Invalid arguments!
 Run the script with no arguments for more information."

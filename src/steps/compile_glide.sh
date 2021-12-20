@@ -1,5 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
 
 min_glide=$(( $glide_margin / 4 ))
 max_glide=$(( $min_glide * 3 ))

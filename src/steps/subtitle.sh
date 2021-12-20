@@ -1,5 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
 
 length=`ffprobe -show_entries format=duration "$4"`
 

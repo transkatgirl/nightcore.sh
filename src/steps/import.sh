@@ -1,5 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
 
 for ext in "${audio_ext[@]}"; do
 	input_file="input.$ext"

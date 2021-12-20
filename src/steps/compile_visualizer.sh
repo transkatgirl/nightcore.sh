@@ -1,6 +1,4 @@
 set -euo pipefail
-source "$script_dir/steps/_const.sh"
-source "$tmpdir/prefs.sh"
 
 vr="$((16#${visualizer_color:1:2}))"
 vg="$((16#${visualizer_color:3:2}))"

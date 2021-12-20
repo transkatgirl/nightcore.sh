@@ -1,6 +1,6 @@
 set -euo pipefail
 
-echo "Usage: sh nightcore.sh [mode] [input directory]
+echo "Usage: bash nightcore.sh [mode] [input directory]
 
 
 System requirements:
