@@ -2,7 +2,7 @@ set -euo pipefail
 
 # Command abbreviations
 
-alias ffmpeg="FONTCONFIG_FILE=$tmpdir/fonts.conf ffmpeg -loglevel error"
+alias ffmpeg="ffmpeg -loglevel error"
 alias ffprobe="ffprobe -loglevel error -of csv=p=0"
 alias sox="sox -V1"
 
@@ -64,6 +64,8 @@ alias remove_parenthesis="sed 's/([^)]*)//g;s/  / /g'"
 alias remove_featuring="sed 's/Featuring.*//'"
 
 # Font configuration tools
+
+export FONTCONFIG_FILE=$tmpdir/fonts.conf
 
 calculate_sizes() {
 	padding=`echo $output_width $padding_multiplier | awk '{print int($1 * $2 * (5/768))}'`
