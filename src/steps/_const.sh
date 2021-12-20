@@ -2,7 +2,7 @@ set -euo pipefail
 
 # Command abbreviations
 
-alias ffmpeg="FONTCONFIG_FILE=$TMPDIR/fonts.conf ffmpeg -loglevel error"
+alias ffmpeg="FONTCONFIG_FILE=$tmpdir/fonts.conf ffmpeg -loglevel error"
 alias ffprobe="ffprobe -loglevel error -of csv=p=0"
 alias sox="sox -V1"
 
