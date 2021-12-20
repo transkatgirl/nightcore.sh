@@ -1,3 +1,5 @@
+shopt -s expand_aliases
+
 export script_dir="$(realpath `dirname "$0"`)/src"
 
 if [ -n "$1" ]; then
